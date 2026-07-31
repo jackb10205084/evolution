@@ -50,15 +50,27 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
+import {
+  ApiClientError,
+  checkInBooking,
+  createBooking,
+  createRender,
+  createShare,
+  loadDesigns,
+  loadRenderState,
+  revokeShare,
+  saveDesign as saveDesignApi,
+} from "./lib/api-client";
+import type { BookingSession, RenderJobRecord } from "./lib/api-client";
 import { catalog, floorplans, initialFurnitureIds, themes } from "./lib/catalog";
 import type {
   BookingDraft,
   EditorMode,
   FurnitureItem,
-  RenderLedgerEntry,
   SceneObjectV1,
 } from "./lib/domain";
 import { formatCurrency } from "./lib/domain";
+import { proposalProject } from "./lib/project";
 
 const ExperienceCanvas = dynamic(
   () => import("./components/experience-canvas").then((module) => module.ExperienceCanvas),
@@ -68,6 +80,8 @@ const ExperienceCanvas = dynamic(
 type Stage = "landing" | "login" | "avatar" | "setup" | "editor" | "gallery" | "admin";
 type Modal = null | "booking" | "render" | "cart" | "share" | "menu";
 type AdminView = "builder" | "platform";
+type ActionState = null | "booking" | "check-in" | "render" | "share" | "revoke-share";
+type ShareSession = { id: string; url: string; expiresAt: string };
 
 const initialPositions: Record<string, [number, number]> = {
   "rug-meadow": [0.1, 0.1],
@@ -103,13 +117,15 @@ export function HomePlayApp() {
   const [budgetEnabled, setBudgetEnabled] = useState(true);
   const [undoStack, setUndoStack] = useState<SceneObjectV1[][]>([]);
   const [redoStack, setRedoStack] = useState<SceneObjectV1[][]>([]);
-  const [saveState, setSaveState] = useState<"saved" | "saving">("saved");
+  const [saveState, setSaveState] = useState<"saved" | "saving" | "error">("saved");
   const [toast, setToast] = useState("");
   const [renderCredits, setRenderCredits] = useState(0);
-  const [, setRenderLedger] = useState<RenderLedgerEntry[]>([]);
-  const [renderJobs, setRenderJobs] = useState<{ id: string; status: "processing" | "complete"; createdAt: string }[]>([]);
-  const [bookingComplete, setBookingComplete] = useState(false);
-  const [checkedIn, setCheckedIn] = useState(false);
+  const [renderJobs, setRenderJobs] = useState<RenderJobRecord[]>([]);
+  const [designId, setDesignId] = useState<string | null>(null);
+  const [designReady, setDesignReady] = useState(false);
+  const [bookingSession, setBookingSession] = useState<BookingSession | null>(null);
+  const [shareSession, setShareSession] = useState<ShareSession | null>(null);
+  const [actionState, setActionState] = useState<ActionState>(null);
   const [adminView, setAdminView] = useState<AdminView>("builder");
   const [cartOpenIds, setCartOpenIds] = useState<string[]>([]);
   const dragStart = useRef<SceneObjectV1[] | null>(null);
@@ -136,6 +152,15 @@ export function HomePlayApp() {
     [category, search],
   );
 
+  const showToast = useCallback((message: string) => setToast(message), []);
+
+  const refreshRenderState = useCallback(async () => {
+    const state = await loadRenderState();
+    setRenderCredits(state.balance);
+    setRenderJobs(state.jobs);
+    return state;
+  }, []);
+
   useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(""), 2600);
@@ -143,31 +168,50 @@ export function HomePlayApp() {
   }, [toast]);
 
   useEffect(() => {
-    if (stage !== "editor") return;
+    if (stage !== "editor" || !designReady) return;
     const stateTimer = window.setTimeout(() => setSaveState("saving"), 0);
     const timer = window.setTimeout(() => {
-      setSaveState("saved");
-      void fetch("/api/designs", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ floorplanId: selectedFloorplan, themeId: selectedTheme, objects: items }),
-      }).catch(() => undefined);
+      void saveDesignApi({ floorplanId: selectedFloorplan, themeId: selectedTheme, objects: items })
+        .then((saved) => {
+          setDesignId(saved.id);
+          setSaveState("saved");
+        })
+        .catch((error: unknown) => {
+          setSaveState("error");
+          showToast(apiMessage(error, "這次配置尚未儲存，稍後會再試"));
+        });
     }, 900);
     return () => {
       window.clearTimeout(stateTimer);
       window.clearTimeout(timer);
     };
-  }, [items, selectedFloorplan, selectedTheme, stage]);
+  }, [designReady, items, selectedFloorplan, selectedTheme, showToast, stage]);
 
-  const showToast = useCallback((message: string) => setToast(message), []);
-
-  const enterExperience = () => {
+  const enterExperience = async () => {
     setItems(buildInitialScene(selectedTheme));
     setUndoStack([]);
     setRedoStack([]);
     setSelectedItemId(selectedTheme === "empty" ? null : "scene-sofa-cloud");
+    setDesignReady(false);
     setStage("editor");
     window.scrollTo({ top: 0, behavior: "smooth" });
+    try {
+      const [savedDesigns, renderState] = await Promise.all([loadDesigns(), loadRenderState()]);
+      const saved = savedDesigns.find((entry) => entry.floorplanId === selectedFloorplan);
+      setRenderCredits(renderState.balance);
+      setRenderJobs(renderState.jobs);
+      if (saved?.snapshot.objects?.length) {
+        setItems(saved.snapshot.objects);
+        setSelectedTheme(saved.themeId);
+        setDesignId(saved.id);
+        setSelectedItemId(saved.snapshot.objects[0]?.id ?? null);
+        showToast("已載入上次自動儲存的配置");
+      }
+    } catch (error) {
+      showToast(apiMessage(error, "雲端資料暫時無法載入，本次仍可繼續編輯"));
+    } finally {
+      setDesignReady(true);
+    }
   };
 
   const commit = (next: SceneObjectV1[]) => {
@@ -261,29 +305,110 @@ export function HomePlayApp() {
     setModal("cart");
   };
 
-  const submitRender = () => {
+  const persistDesignNow = async () => {
+    const saved = await saveDesignApi({ floorplanId: selectedFloorplan, themeId: selectedTheme, objects: items });
+    setDesignId(saved.id);
+    setSaveState("saved");
+    return saved.id;
+  };
+
+  const submitRender = async () => {
     if (renderCredits < 1) {
       showToast("渲染點數不足，可先購買點數包");
       return;
     }
-    setRenderCredits((credits) => credits - 1);
-    setRenderLedger((ledger) => [{ id: crypto.randomUUID(), delta: -1, reason: "render_charge", createdAt: new Date().toISOString() }, ...ledger]);
-    const id = crypto.randomUUID();
-    setRenderJobs((jobs) => [{ id, status: "processing", createdAt: new Date().toISOString() }, ...jobs]);
-    setModal(null);
-    showToast("寫實作品正在背景製作");
-    window.setTimeout(() => setRenderJobs((jobs) => jobs.map((job) => job.id === id ? { ...job, status: "complete" } : job)), 4600);
+    setActionState("render");
+    try {
+      const currentDesignId = designId ?? await persistDesignNow();
+      await createRender({
+        designId: currentDesignId,
+        camera: { position: { x: 8.8, y: 8.4, z: 10.2 }, target: { x: 0, y: 0.8, z: 0 }, fov: 38 },
+      }, crypto.randomUUID());
+      await refreshRenderState();
+      setModal(null);
+      showToast("寫實作品已排入背景任務");
+    } catch (error) {
+      showToast(apiMessage(error, "寫實作品送出失敗，點數不會被重複扣除"));
+      await refreshRenderState().catch(() => undefined);
+    } finally {
+      setActionState(null);
+    }
   };
 
-  const grantCheckInCredits = () => {
-    if (checkedIn) {
+  const handleBookingCreate = async (form: BookingDraft) => {
+    setActionState("booking");
+    try {
+      const currentDesignId = designId ?? await persistDesignNow();
+      const booking = await createBooking({
+        floorplanId: selectedFloorplan,
+        designId: currentDesignId,
+        form,
+        configurationSummary: {
+          themeId: selectedTheme,
+          furnitureSkus: items.map((item) => item.sku),
+          furnitureCount: items.length,
+          estimatedTotalTwd: total,
+        },
+      }, crypto.randomUUID());
+      setBookingSession(booking);
+      showToast("預約已安全送出");
+    } catch (error) {
+      showToast(apiMessage(error, "預約送出失敗，請稍後再試"));
+    } finally {
+      setActionState(null);
+    }
+  };
+
+  const handleCheckIn = async () => {
+    if (!bookingSession) return;
+    if (bookingSession.status === "checked_in") {
       showToast("此預約已完成報到，不可重複發放");
       return;
     }
-    setCheckedIn(true);
-    setRenderCredits((credits) => credits + 3);
-    setRenderLedger((ledger) => [{ id: crypto.randomUUID(), delta: 3, reason: "check_in_grant", createdAt: new Date().toISOString() }, ...ledger]);
-    showToast("現場報到完成，已發放 3 點寫實渲染");
+    setActionState("check-in");
+    try {
+      await checkInBooking(bookingSession, crypto.randomUUID());
+      setBookingSession({ ...bookingSession, status: "checked_in" });
+      await refreshRenderState();
+      showToast("現場報到完成，已發放 3 點寫實渲染");
+    } catch (error) {
+      showToast(apiMessage(error, "報到未完成，請由接待人員重新掃描"));
+    } finally {
+      setActionState(null);
+    }
+  };
+
+  const handleShare = async () => {
+    setActionState("share");
+    try {
+      let current = shareSession;
+      if (!current) {
+        const currentDesignId = designId ?? await persistDesignNow();
+        const created = await createShare(currentDesignId, crypto.randomUUID());
+        current = { id: created.id, url: `${window.location.origin}/s/${created.token}`, expiresAt: created.expiresAt };
+        setShareSession(current);
+      }
+      await navigator.clipboard?.writeText(current.url);
+      showToast("唯讀分享連結已複製");
+    } catch (error) {
+      showToast(apiMessage(error, "分享連結建立失敗"));
+    } finally {
+      setActionState(null);
+    }
+  };
+
+  const handleRevokeShare = async () => {
+    if (!shareSession) return;
+    setActionState("revoke-share");
+    try {
+      await revokeShare(shareSession.id);
+      setShareSession(null);
+      showToast("分享連結已撤銷");
+    } catch (error) {
+      showToast(apiMessage(error, "分享連結撤銷失敗"));
+    } finally {
+      setActionState(null);
+    }
   };
 
   if (stage === "landing") {
@@ -455,11 +580,11 @@ export function HomePlayApp() {
         </aside>
       </div>
 
-      {modal === "booking" && <BookingModal complete={bookingComplete} checkedIn={checkedIn} onClose={() => setModal(null)} onComplete={() => setBookingComplete(true)} onCheckIn={grantCheckInCredits} />}
-      {modal === "render" && <RenderModal credits={renderCredits} onClose={() => setModal(null)} onSubmit={submitRender} onBuy={() => { setRenderCredits((value) => value + 5); setRenderLedger((ledger) => [{ id: crypto.randomUUID(), delta: 5, reason: "purchase", createdAt: new Date().toISOString() }, ...ledger]); showToast("測試點數包已入帳"); }} />}
+      {modal === "booking" && <BookingModal booking={bookingSession} busy={actionState === "booking" || actionState === "check-in"} onClose={() => setModal(null)} onComplete={handleBookingCreate} onCheckIn={handleCheckIn} />}
+      {modal === "render" && <RenderModal credits={renderCredits} busy={actionState === "render"} onClose={() => setModal(null)} onSubmit={submitRender} onBuy={() => showToast("正式點數包將在綠界憑證啟用後開放；現場報到可先取得 3 點")} />}
       {modal === "cart" && <CartModal products={catalog.filter((product) => cartOpenIds.includes(product.id))} ownedTotal={ownedTotal} onClose={() => setModal(null)} onCheckout={() => showToast("已進入綠界測試結帳 Adapter")} />}
-      {modal === "share" && <ShareModal onClose={() => setModal(null)} onCopy={async () => { await navigator.clipboard?.writeText(window.location.href); showToast("分享連結已複製"); }} />}
-      {modal === "menu" && <MenuModal onClose={() => setModal(null)} onAdmin={() => { setModal(null); setStage("admin"); }} onLogout={() => { setModal(null); setStage("landing"); }} />}
+      {modal === "share" && <ShareModal share={shareSession} busy={actionState === "share" || actionState === "revoke-share"} onClose={() => setModal(null)} onCopy={handleShare} onRevoke={handleRevokeShare} />}
+      {modal === "menu" && <MenuModal credits={renderCredits} designCount={designId ? 1 : 0} workCount={renderJobs.length} onClose={() => setModal(null)} onAdmin={() => { setModal(null); setStage("admin"); }} onLogout={() => { setModal(null); setStage("landing"); }} />}
       {toast && <div className="toast"><Check size={17} />{toast}</div>}
 
       <button className="floating-render" onClick={() => setModal("render")}>
@@ -477,7 +602,7 @@ function Landing({ onStart, onAdmin, mobileNav, setMobileNav }: { onStart: () =>
       <nav className="landing-nav">
         <Brand />
         <div className={`landing-links ${mobileNav ? "open" : ""}`}>
-          <a href="#how">怎麼玩</a><a href="#styles">風格主題</a><a href="#project">合作建案</a>
+          <a href="#how">怎麼玩</a><a href="#styles">風格主題</a><a href="#project">首發提案</a>
           <button className="text-button" onClick={onAdmin}><LayoutDashboard size={16} />企業後台</button>
           <button className="nav-cta" onClick={onStart}>開始打造<ArrowRight size={16} /></button>
         </div>
@@ -486,16 +611,23 @@ function Landing({ onStart, onAdmin, mobileNav, setMobileNav }: { onStart: () =>
 
       <section className="hero">
         <div className="hero-copy">
-          <span className="co-brand"><Building2 size={16} />森沐建設 × 居遊所 Play Ground</span>
-          <h1>先住進你的<br /><em>未來生活</em></h1>
-          <p>選一個格局、布置喜歡的家具，再讓你的 Q 版角色走進去。從想像一個家，到真正來看它。</p>
+          <span className="co-brand"><Building2 size={16} />概念提案 · {proposalProject.name} × 居遊所 Play Ground</span>
+          <h1>把自然遊園<br />搬進<em>未來生活</em></h1>
+          <p>以北屯 21–39 坪、兩至三房的公開規劃為起點，先用 Q 版角色走進未來家，再配置可真正購買的家具。</p>
           <div className="hero-actions">
             <button className="hero-primary" onClick={onStart}><Gamepad2 size={20} />開始打造我的家</button>
             <a href="#how" className="hero-secondary"><Eye size={19} />先看看怎麼玩</a>
           </div>
-          <div className="hero-note"><span className="avatar-stack"><i /><i /><i /></span><strong>1,284</strong> 個未來的家正在被打造</div>
+          <div className="hero-note"><span className="avatar-stack"><i /><i /><i /></span><strong>首發提案</strong> · 機捷生活 × 自然遊園 × 家具導購</div>
         </div>
         <DollhousePreview />
+      </section>
+
+      <section className="proposal-facts" aria-label="遠雄樂元公開建案重點">
+        <article><strong>21–39</strong><span>坪 · 兩至三房</span></article>
+        <article><strong>29</strong><span>層 · 北屯天際</span></article>
+        <article><strong>2,147</strong><span>坪 · 基地規模</span></article>
+        <article><strong>25 m</strong><span>泳池 · 遊園公設</span></article>
       </section>
 
       <section className="value-strip" id="how">
@@ -520,8 +652,8 @@ function Landing({ onStart, onAdmin, mobileNav, setMobileNav }: { onStart: () =>
       </section>
 
       <section className="project-banner" id="project">
-        <div><span className="eyebrow">首發合作建案</span><h2>河岸青·讓光走進每一個房間</h2><p>三種主力戶型全數上線，從 26.8 坪兩房到 42.2 坪景觀三房。</p></div>
-        <button onClick={onStart}>玩這個建案<ArrowRight /></button>
+        <div><span className="eyebrow">第一號概念提案</span><h2>{proposalProject.name} · 北屯機捷生活遊園</h2><p>把捷運、採光、綠意與 21–39 坪生活尺度，轉化成可以走進、配置、分享並預約的導購體驗。</p><small className="proposal-disclaimer">本頁為居遊所依公開資訊製作的未委託概念提案；戶型為坪數分帶示意，非正式銷售圖說。</small><a className="official-source" href={proposalProject.officialUrl} target="_blank" rel="noreferrer">查看建案官方資料<ExternalLink size={15} /></a></div>
+        <button onClick={onStart}>體驗提案<ArrowRight /></button>
       </section>
 
       <footer><Brand /><p>居遊所 Play Ground · 遊戲化建案家飾導購平台</p><span>開發中版本·台灣</span></footer>
@@ -600,8 +732,8 @@ function SetupScreen({ selectedFloorplan, setSelectedFloorplan, selectedTheme, s
     <main className="setup-page">
       <header><Brand /><span className="setup-progress"><i className="done" /><i className="done" /><i className="active" />STEP 3 / 3</span><button className="text-button" onClick={onBack}><ArrowLeft />上一步</button></header>
       <section className="setup-content">
-        <div className="setup-heading"><span className="co-brand"><Building2 size={15} />森沐建設·河岸青</span><h1>選一個格局，先住進去看看。</h1><p>所有戶型都來自正式建築圖面，家具比例與實品一致。</p></div>
-        <div className="setup-block"><div className="setup-block-title"><b>01</b><span><strong>選擇戶型</strong><small>三種主力格局</small></span></div><div className="floorplan-grid">{floorplans.map((floorplan) => <button key={floorplan.id} className={selectedFloorplan === floorplan.id ? "selected" : ""} onClick={() => setSelectedFloorplan(floorplan.id)}><FloorplanMini accent={floorplan.accent} /><span><strong>{floorplan.name}</strong><small>{floorplan.rooms}·{floorplan.area}</small><p>{floorplan.subtitle}</p></span>{selectedFloorplan === floorplan.id && <Check className="selection-check" />}</button>)}</div></div>
+        <div className="setup-heading"><span className="co-brand"><Building2 size={15} />概念提案 · {proposalProject.builder} · {proposalProject.name}</span><h1>選一個坪數分帶，先住進去看看。</h1><p>公開資料僅揭露兩至三房、約 21–39 坪；目前格局為提案示意，正式導入後必須改用建商核驗圖面。</p></div>
+        <div className="setup-block"><div className="setup-block-title"><b>01</b><span><strong>選擇坪數分帶</strong><small>四種提案型 · 非正式戶別</small></span></div><div className="floorplan-grid">{floorplans.map((floorplan) => <button key={floorplan.id} className={selectedFloorplan === floorplan.id ? "selected" : ""} onClick={() => setSelectedFloorplan(floorplan.id)}><FloorplanMini accent={floorplan.accent} /><span><strong>{floorplan.name}</strong><small>{floorplan.rooms}·{floorplan.area}</small><p>{floorplan.subtitle}</p></span>{selectedFloorplan === floorplan.id && <Check className="selection-check" />}</button>)}</div></div>
         <div className="setup-block"><div className="setup-block-title"><b>02</b><span><strong>選擇生活主題</strong><small>預設配置後仍可自由修改</small></span></div><div className="setup-theme-grid">{themes.map((theme) => <button key={theme.id} className={selectedTheme === theme.id ? "selected" : ""} onClick={() => setSelectedTheme(theme.id)} style={{ "--theme-a": theme.palette[0], "--theme-b": theme.palette[1], "--theme-c": theme.palette[2] } as CSSProperties}><span className="setup-theme-art"><b>{theme.emoji}</b><i /></span><strong>{theme.name}</strong><small>{theme.english}</small>{selectedTheme === theme.id && <Check className="selection-check" />}</button>)}</div></div>
         <button className="enter-experience" onClick={onEnter}><Gamepad2 />進入 3D 未來家<span>{floorplans.find((floorplan) => floorplan.id === selectedFloorplan)?.name}·{themes.find((theme) => theme.id === selectedTheme)?.name}</span><ArrowRight /></button>
       </section>
@@ -610,44 +742,46 @@ function SetupScreen({ selectedFloorplan, setSelectedFloorplan, selectedTheme, s
 }
 
 function EditorHeader({ mode, setMode, total, budget, saveState, renderCredits, onBack, onBooking, onShare, onCart, onGallery, onMenu }: { mode: EditorMode; setMode: (mode: EditorMode) => void; total: number; budget: number; saveState: string; renderCredits: number; onBack: () => void; onBooking: () => void; onShare: () => void; onCart: () => void; onGallery: () => void; onMenu: () => void }) {
-  return <header className="editor-header"><button className="editor-back" onClick={onBack}><ArrowLeft /></button><Brand compact /><span className="header-divider" /><div className="mode-switch"><button className={mode === "explore" ? "active" : ""} onClick={() => setMode("explore")}><Gamepad2 />探索</button><button className={mode === "decorate" ? "active" : ""} onClick={() => setMode("decorate")}><MousePointer2 />佈置</button></div><div className="editor-head-spacer" /><span className="save-state"><Save size={15} />{saveState === "saved" ? "已自動儲存" : "儲存中…"}</span><button className="header-total"><small>目前總價</small><strong>{formatCurrency(total)}</strong><span className={total > budget ? "over" : ""}>{total > budget ? "超出預算" : "預算內"}</span></button><button className="icon-label" onClick={onGallery}><ImageIcon />作品 <b>{renderCredits}</b></button><button className="icon-label" onClick={onShare}><Share2 />分享</button><button className="icon-label" onClick={onCart}><ShoppingBag />購物車</button><button className="booking-button" onClick={onBooking}><CalendarDays />預約賞屋</button><button className="avatar-menu" onClick={onMenu}><AvatarFigure color="#6ea697" index={1} /></button></header>;
+  return <header className="editor-header"><button className="editor-back" onClick={onBack}><ArrowLeft /></button><Brand compact /><span className="header-divider" /><div className="mode-switch"><button className={mode === "explore" ? "active" : ""} onClick={() => setMode("explore")}><Gamepad2 />探索</button><button className={mode === "decorate" ? "active" : ""} onClick={() => setMode("decorate")}><MousePointer2 />佈置</button></div><div className="editor-head-spacer" /><span className={`save-state ${saveState === "error" ? "over" : ""}`}><Save size={15} />{saveState === "saved" ? "已自動儲存" : saveState === "error" ? "尚未儲存" : "儲存中…"}</span><button className="header-total"><small>目前總價</small><strong>{formatCurrency(total)}</strong><span className={total > budget ? "over" : ""}>{total > budget ? "超出預算" : "預算內"}</span></button><button className="icon-label" onClick={onGallery}><ImageIcon />作品 <b>{renderCredits}</b></button><button className="icon-label" onClick={onShare}><Share2 />分享</button><button className="icon-label" onClick={onCart}><ShoppingBag />購物車</button><button className="booking-button" onClick={onBooking}><CalendarDays />預約賞屋</button><button className="avatar-menu" onClick={onMenu}><AvatarFigure color="#6ea697" index={1} /></button></header>;
 }
 
-function BookingModal({ complete, checkedIn, onClose, onComplete, onCheckIn }: { complete: boolean; checkedIn: boolean; onClose: () => void; onComplete: () => void; onCheckIn: () => void }) {
+function BookingModal({ booking, busy, onClose, onComplete, onCheckIn }: { booking: BookingSession | null; busy: boolean; onClose: () => void; onComplete: (form: BookingDraft) => Promise<void>; onCheckIn: () => Promise<void> }) {
   const [form, setForm] = useState<BookingDraft>({ date: "2026-08-08", slot: "14:00", name: "陳小居", phone: "0912 345 678", consent: true });
-  return <ModalShell onClose={onClose} wide>{complete ? <div className="booking-success"><div className="success-icon"><Check /></div><span className="eyebrow">預約已送出</span><h2>8 月 8 日·下午 2:00</h2><p>森沐建設將與你確認。現場報到後，帳號會免費解鎖 3 張寫實渲染。</p><div className="qr-card"><QrCode size={86} /><span><strong>報到碼 PG-2808</strong><small>接待人員掃描後即完成報到</small></span></div><button className="primary-button full" onClick={onCheckIn} disabled={checkedIn}>{checkedIn ? <><Check />已報到·發放 3 點</> : <><QrCode />模擬現場報到</>}</button></div> : <div className="booking-form"><span className="eyebrow">預約賞屋</span><h2>把這個家，變成真的。</h2><p>預約並實際到場後，即可免費解鎖 3 點寫實渲染。</p><div className="form-grid"><label><span>姓名</span><input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label><label><span>手機</span><input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} /></label><label><span>日期</span><input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label><label><span>時段</span><select value={form.slot} onChange={(event) => setForm({ ...form, slot: event.target.value })}><option>10:00</option><option>11:30</option><option>14:00</option><option>16:00</option></select></label></div><label className="consent"><input type="checkbox" checked={form.consent} onChange={(event) => setForm({ ...form, consent: event.target.checked })} /><span><strong>我同意將本次聯絡資料、意向戶型與配置摘要提供給森沐建設</strong><small>私人作品、購物車與點數不會被分享。</small></span></label><button className="primary-button full large" disabled={!form.consent || !form.name || !form.phone} onClick={onComplete}>確認預約<ArrowRight /></button></div>}</ModalShell>;
+  const checkedIn = booking?.status === "checked_in";
+  return <ModalShell onClose={onClose} wide>{booking ? <div className="booking-success"><div className="success-icon"><Check /></div><span className="eyebrow">概念預約流程已建立</span><h2>{new Date(booking.scheduledAt).toLocaleString("zh-TW", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</h2><p>目前資料只保存在居遊所提案環境，不會送至遠雄。正式合作接上 CRM 後，才會由建商確認預約。</p><div className="qr-card"><QrCode size={86} /><span><strong>報到碼 {booking.id.slice(-6).toUpperCase()}</strong><small>正式流程由接待人員掃描後完成報到</small></span></div><button className="primary-button full" onClick={() => void onCheckIn()} disabled={checkedIn || busy}>{checkedIn ? <><Check />已報到·發放 3 點</> : busy ? <>報到處理中…</> : <><QrCode />Alpha：模擬接待台掃碼</>}</button></div> : <div className="booking-form"><span className="eyebrow">預約賞屋 · 流程提案</span><h2>把這個家，變成真的。</h2><p>正式合作時，預約並實際到場即可免費解鎖 3 點寫實渲染。</p><div className="form-grid"><label><span>姓名</span><input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label><label><span>手機</span><input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} /></label><label><span>日期</span><input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label><label><span>時段</span><select value={form.slot} onChange={(event) => setForm({ ...form, slot: event.target.value })}><option>10:00</option><option>11:30</option><option>14:00</option><option>16:00</option></select></label></div><label className="consent"><input type="checkbox" checked={form.consent} onChange={(event) => setForm({ ...form, consent: event.target.checked })} /><span><strong>我了解這是概念提案，資料不會送至遠雄建設</strong><small>正式合作後，會另取得將聯絡資料與配置摘要提供給建商的明確同意。</small></span></label><button className="primary-button full large" disabled={!form.consent || !form.name || !form.phone || busy} onClick={() => void onComplete(form)}>{busy ? "安全送出中…" : <>體驗預約流程<ArrowRight /></>}</button></div>}</ModalShell>;
 }
 
-function RenderModal({ credits, onClose, onSubmit, onBuy }: { credits: number; onClose: () => void; onSubmit: () => void; onBuy: () => void }) {
-  return <ModalShell onClose={onClose}><div className="render-modal"><div className="render-preview"><span className="render-window" /><span className="render-sofa" /><span className="render-plant" /><b><Sparkles />AI 僅增強光影與窗景</b></div><span className="eyebrow">寫實作品</span><h2>把現在的鏡頭變成建築效果圖</h2><p>格局、家具型號與擺放位置完全保留，完成後自動放入作品庫。</p><div className="credit-line"><WalletCards /><span><small>可用渲染點數</small><strong>{credits} 點</strong></span><b>本次 -1</b></div>{credits > 0 ? <button className="primary-button full large" onClick={onSubmit}><WandSparkles />送出這個鏡頭</button> : <button className="primary-button full large" onClick={onBuy}><CreditCard />購買測試點數包·5 點</button>}<small className="render-note">失敗任務會自動退還點數，正式金額由營運後台設定。</small></div></ModalShell>;
+function RenderModal({ credits, busy, onClose, onSubmit, onBuy }: { credits: number; busy: boolean; onClose: () => void; onSubmit: () => Promise<void>; onBuy: () => void }) {
+  return <ModalShell onClose={onClose}><div className="render-modal"><div className="render-preview"><span className="render-window" /><span className="render-sofa" /><span className="render-plant" /><b><Sparkles />AI 僅增強光影與窗景</b></div><span className="eyebrow">寫實作品</span><h2>把現在的鏡頭變成建築效果圖</h2><p>格局、家具型號與擺放位置完全保留，完成後自動放入作品庫。</p><div className="credit-line"><WalletCards /><span><small>可用渲染點數</small><strong>{credits} 點</strong></span><b>本次 -1</b></div>{credits > 0 ? <button className="primary-button full large" disabled={busy} onClick={() => void onSubmit()}><WandSparkles />{busy ? "安全扣點並排程中…" : "送出這個鏡頭"}</button> : <button className="primary-button full large" onClick={onBuy}><CreditCard />取得渲染點數</button>}<small className="render-note">失敗任務會以追加 ledger 自動退點；不會直接修改餘額。</small></div></ModalShell>;
 }
 
 function CartModal({ products, ownedTotal, onClose, onCheckout }: { products: FurnitureItem[]; ownedTotal: number; onClose: () => void; onCheckout: () => void }) {
   return <ModalShell onClose={onClose} wide><div className="cart-modal"><span className="eyebrow">自有品牌購物車</span><h2>把喜歡的配置帶回家</h2><div className="cart-list">{products.length ? products.map((product) => <div key={product.id}><ProductShape product={product} /><span><strong>{product.name}</strong><small>{product.sku}·{product.stock === "low_stock" ? "庫存不多" : "有現貨"}</small></span><b>{formatCurrency(product.price)}</b></div>) : <p>尚未加入自有品牌商品。</p>}</div><div className="cart-summary"><span><small>商品小計</small><strong>{formatCurrency(products.reduce((sum, product) => sum + product.price, 0) || ownedTotal)}</strong></span><small>聯盟商品會另以可追蹤連結開啟品牌網站。</small></div><button className="primary-button full large" onClick={onCheckout}><CreditCard />前往安全結帳</button></div></ModalShell>;
 }
 
-function ShareModal({ onClose, onCopy }: { onClose: () => void; onCopy: () => void }) {
-  return <ModalShell onClose={onClose}><div className="share-modal"><div className="share-card-preview"><span>居遊所 Play Ground × 河岸青</span><strong>我的日光慢生活</strong><DollhousePreview /></div><h2>分享你的未來家</h2><p>作品預設為私人。產生連結後，收件者可檢視商品清單，但無法修改原稿。</p><button className="primary-button full" onClick={onCopy}><Link2 />產生並複製分享連結</button><button className="secondary-button full" onClick={() => window.print()}><Download />下載社群分享圖</button></div></ModalShell>;
+function ShareModal({ share, busy, onClose, onCopy, onRevoke }: { share: ShareSession | null; busy: boolean; onClose: () => void; onCopy: () => Promise<void>; onRevoke: () => Promise<void> }) {
+  return <ModalShell onClose={onClose}><div className="share-modal"><div className="share-card-preview"><span>居遊所 Play Ground × {proposalProject.name} · 概念提案</span><strong>我的日光慢生活</strong><DollhousePreview /></div><h2>分享你的未來家</h2><p>作品預設為私人。連結是唯讀的，收件者可檢視商品清單，但無法修改原稿。</p>{share && <><label className="share-link-field"><span>有效至 {new Date(share.expiresAt).toLocaleDateString("zh-TW")}</span><input readOnly value={share.url} /></label></>}<button className="primary-button full" disabled={busy} onClick={() => void onCopy()}><Link2 />{busy ? "處理中…" : share ? "再次複製分享連結" : "產生並複製分享連結"}</button>{share && <button className="secondary-button full danger" disabled={busy} onClick={() => void onRevoke()}><Trash2 />撤銷這個連結</button>}<button className="secondary-button full" onClick={() => window.print()}><Download />下載社群分享圖</button></div></ModalShell>;
 }
 
-function MenuModal({ onClose, onAdmin, onLogout }: { onClose: () => void; onAdmin: () => void; onLogout: () => void }) {
-  return <ModalShell onClose={onClose}><div className="menu-modal"><div className="menu-profile"><AvatarFigure color="#6ea697" index={1} /><span><strong>陳小居</strong><small>Alpha 測試帳號</small></span></div><button onClick={onAdmin}><LayoutDashboard />企業營運後台<ArrowRight /></button><button><WalletCards />點數與回饋錢包<span>0 點</span></button><button><Save />我的配置<span>1</span></button><button><ImageIcon />寫實作品<span>0</span></button><button className="danger" onClick={onLogout}><LogOut />登出</button></div></ModalShell>;
+function MenuModal({ credits, designCount, workCount, onClose, onAdmin, onLogout }: { credits: number; designCount: number; workCount: number; onClose: () => void; onAdmin: () => void; onLogout: () => void }) {
+  return <ModalShell onClose={onClose}><div className="menu-modal"><div className="menu-profile"><AvatarFigure color="#6ea697" index={1} /><span><strong>陳小居</strong><small>Alpha 測試帳號</small></span></div><button onClick={onAdmin}><LayoutDashboard />企業營運後台<ArrowRight /></button><button><WalletCards />渲染點數<span>{credits} 點</span></button><button><Save />我的配置<span>{designCount}</span></button><button><ImageIcon />寫實作品<span>{workCount}</span></button><button className="danger" onClick={onLogout}><LogOut />登出</button></div></ModalShell>;
 }
 
-function Gallery({ renderJobs, onBack, onNewRender }: { renderJobs: { id: string; status: "processing" | "complete"; createdAt: string }[]; onBack: () => void; onNewRender: () => void }) {
-  return <main className="gallery-page"><header><button className="editor-back" onClick={onBack}><ArrowLeft /></button><Brand compact /><span /><button className="primary-button" onClick={onNewRender}><WandSparkles />產生新作品</button></header><section><span className="eyebrow">私人作品庫</span><h1>我的未來家</h1><p>所有作品預設只有你看得見，主動分享後才會建立連結。</p><div className="gallery-grid"><article className="saved-design"><div className="saved-dollhouse"><DollhousePreview /></div><span><small>3D 配置</small><strong>日光慢生活·A2 兩房</strong><p>7 件家具·已自動儲存</p></span><button onClick={onBack}>繼續編輯<ArrowRight /></button></article>{renderJobs.map((job) => <article className={`render-job ${job.status}`} key={job.id}><div className="render-job-visual"><span /><b>{job.status === "processing" ? <><Clock3 />背景處理中</> : <><Sparkles />寫實作品</>}</b></div><span><small>{new Date(job.createdAt).toLocaleString("zh-TW")}</small><strong>{job.status === "processing" ? "正在增強光影與窗景" : "日光客廳·正式輸出"}</strong></span></article>)}</div></section></main>;
+function Gallery({ renderJobs, onBack, onNewRender }: { renderJobs: RenderJobRecord[]; onBack: () => void; onNewRender: () => void }) {
+  return <main className="gallery-page"><header><button className="editor-back" onClick={onBack}><ArrowLeft /></button><Brand compact /><span /><button className="primary-button" onClick={onNewRender}><WandSparkles />產生新作品</button></header><section><span className="eyebrow">私人作品庫</span><h1>我的未來家</h1><p>所有作品預設只有你看得見，主動分享後才會建立連結。</p><div className="gallery-grid"><article className="saved-design"><div className="saved-dollhouse"><DollhousePreview /></div><span><small>3D 配置 · 概念提案</small><strong>{proposalProject.name}·日光慢生活</strong><p>7 件家具·已自動儲存</p></span><button onClick={onBack}>繼續編輯<ArrowRight /></button></article>{renderJobs.map((job) => <article className={`render-job ${job.status}`} key={job.id}><div className="render-job-visual"><span /><b>{job.status === "completed" ? <><Sparkles />寫實作品</> : job.status === "failed" ? <><X />已退還點數</> : <><Clock3 />{job.status === "queued" ? "等待渲染" : "背景處理中"}</>}</b></div><span><small>{new Date(job.createdAt).toLocaleString("zh-TW")}</small><strong>{job.status === "completed" ? "日光客廳·正式輸出" : job.status === "failed" ? "任務失敗·點數已退還" : job.status === "queued" ? "已排入寫實渲染佇列" : "正在增強光影與窗景"}</strong></span></article>)}</div></section></main>;
 }
 
 function AdminDashboard({ view, setView, onExit, onOpenExperience }: { view: AdminView; setView: (view: AdminView) => void; onExit: () => void; onOpenExperience: () => void }) {
-  return <main className="admin-shell"><aside><Brand compact /><nav><button className={view === "builder" ? "active" : ""} onClick={() => setView("builder")}><Building2 />建商後台</button><button className={view === "platform" ? "active" : ""} onClick={() => setView("platform")}><LayoutDashboard />平台營運</button><span />{["建案內容", "預約名單", "3D 資產", "商品庫存", "渲染與點數", "網域與嵌入"].map((label, index) => <button key={label}><AdminIcon index={index} />{label}{index === 1 && <b>8</b>}</button>)}</nav><button className="admin-exit" onClick={onExit}><ArrowLeft />回到網站</button></aside><section className="admin-main"><header><div><span className="eyebrow">{view === "builder" ? "森沐建設·河岸青" : "居遊所 Play Ground"}</span><h1>{view === "builder" ? "建案營運總覽" : "平台營運中心"}</h1></div><button className="secondary-button" onClick={onOpenExperience}><Eye />開啟消費者體驗</button></header>{view === "builder" ? <BuilderDashboard /> : <PlatformDashboard />}</section></main>;
+  return <main className="admin-shell"><aside><Brand compact /><nav><button className={view === "builder" ? "active" : ""} onClick={() => setView("builder")}><Building2 />建商後台</button><button className={view === "platform" ? "active" : ""} onClick={() => setView("platform")}><LayoutDashboard />平台營運</button><span />{["建案內容", "預約名單", "3D 資產", "商品庫存", "渲染與點數", "網域與嵌入"].map((label, index) => <button key={label}><AdminIcon index={index} />{label}{index === 1 && <b>8</b>}</button>)}</nav><button className="admin-exit" onClick={onExit}><ArrowLeft />回到網站</button></aside><section className="admin-main"><header><div><span className="eyebrow">{view === "builder" ? `${proposalProject.builder} · ${proposalProject.name} · 概念提案` : "居遊所 Play Ground"}</span><h1>{view === "builder" ? "建案營運提案總覽" : "平台營運中心"}</h1></div><button className="secondary-button" onClick={onOpenExperience}><Eye />開啟消費者體驗</button></header>{view === "builder" ? <BuilderDashboard /> : <PlatformDashboard />}</section></main>;
 }
 
 function BuilderDashboard() {
-  return <><div className="stat-grid"><Stat icon={<Users />} label="本月匿名體驗" value="1,284" delta="+18.4%" /><Stat icon={<CalendarDays />} label="已同意預約" value="86" delta="+12" /><Stat icon={<QrCode />} label="實際報到" value="54" delta="62.8%" /><Stat icon={<Box />} label="本月 3D 流量" value="68%" delta="方案內" /></div><div className="admin-grid"><article className="chart-card"><div className="card-head"><span><strong>近 14 日體驗趨勢</strong><small>僅顯示匿名聚合資料</small></span><button>14 日<ChevronDown /></button></div><div className="bar-chart">{[32, 45, 39, 62, 55, 72, 68, 84, 76, 91, 88, 105, 112, 118].map((height, index) => <span key={index} style={{ height: `${height / 1.25}%` }}><i /></span>)}</div><div className="chart-labels"><span>7/18</span><span>7/22</span><span>7/26</span><span>7/31</span></div></article><article className="popular-card"><div className="card-head"><span><strong>熱門戶型</strong><small>使用者進入 3D 的選擇</small></span></div>{floorplans.map((floorplan, index) => <div className="popular-row" key={floorplan.id}><FloorplanMini accent={floorplan.accent} /><span><strong>{floorplan.name}</strong><small>{[46, 34, 20][index]}% 體驗佔比</small></span><div><i style={{ width: `${[92, 68, 40][index]}%` }} /></div></div>)}</article><article className="lead-card span-two"><div className="card-head"><span><strong>最新預約</strong><small>僅列出已同意分享資料的使用者</small></span><button><Download />CSV</button></div><table><thead><tr><th>姓名</th><th>意向戶型</th><th>配置主題</th><th>預約時間</th><th>狀態</th></tr></thead><tbody>{[["陳●居", "A2 日光兩房", "日光慢生活", "8/02 14:00", "待確認"], ["林●宇", "B1 輕盈三房", "毛孩共居所", "8/03 11:30", "已確認"], ["許●安", "C3 景觀三房", "親子成長家", "8/04 16:00", "已報到"]].map((row) => <tr key={row[0]}>{row.map((cell, index) => <td key={cell}>{index === 4 ? <span className={`status s${index}`}>{cell}</span> : cell}</td>)}</tr>)}</tbody></table></article></div></>;
+  const shares = [38, 27, 21, 14];
+  return <><div className="demo-data-banner">概念提案 · 以下數據與名單皆為展示資料</div><div className="stat-grid"><Stat icon={<Users />} label="匿名體驗（Demo）" value="1,284" delta="+18.4%" /><Stat icon={<CalendarDays />} label="同意預約（Demo）" value="86" delta="+12" /><Stat icon={<QrCode />} label="實際報到（Demo）" value="54" delta="62.8%" /><Stat icon={<Box />} label="3D 流量（Demo）" value="68%" delta="方案內" /></div><div className="admin-grid"><article className="chart-card"><div className="card-head"><span><strong>近 14 日體驗趨勢</strong><small>提案用匿名聚合示範</small></span><button>14 日<ChevronDown /></button></div><div className="bar-chart">{[32, 45, 39, 62, 55, 72, 68, 84, 76, 91, 88, 105, 112, 118].map((height, index) => <span key={index} style={{ height: `${height / 1.25}%` }}><i /></span>)}</div><div className="chart-labels"><span>7/18</span><span>7/22</span><span>7/26</span><span>7/31</span></div></article><article className="popular-card"><div className="card-head"><span><strong>坪數分帶偏好</strong><small>使用者進入 3D 的選擇</small></span></div>{floorplans.map((floorplan, index) => <div className="popular-row" key={floorplan.id}><FloorplanMini accent={floorplan.accent} /><span><strong>{floorplan.name}</strong><small>{shares[index]}% 體驗佔比</small></span><div><i style={{ width: `${shares[index] * 2}%` }} /></div></div>)}</article><article className="lead-card span-two"><div className="card-head"><span><strong>最新預約 · Demo</strong><small>正式版僅列出已同意分享資料的使用者</small></span><button><Download />CSV</button></div><table><thead><tr><th>姓名</th><th>意向坪數</th><th>配置主題</th><th>預約時間</th><th>狀態</th></tr></thead><tbody>{[["陳●居", "兩房 21 坪", "日光慢生活", "8/02 14:00", "待確認"], ["林●宇", "兩房 27 坪", "毛孩共居所", "8/03 11:30", "已確認"], ["許●安", "三房 39 坪", "親子成長家", "8/04 16:00", "已報到"]].map((row) => <tr key={row[0]}>{row.map((cell, index) => <td key={cell}>{index === 4 ? <span className={`status s${index}`}>{cell}</span> : cell}</td>)}</tr>)}</tbody></table></article></div></>;
 }
 
 function PlatformDashboard() {
-  return <><div className="stat-grid"><Stat icon={<Building2 />} label="啟用中建案" value="01" delta="Alpha" /><Stat icon={<Store />} label="自有品牌 SKU" value="168" delta="96% 有貨" /><Stat icon={<WandSparkles />} label="本月渲染任務" value="326" delta="98.7% 成功" /><Stat icon={<BadgePercent />} label="聯盟點擊" value="742" delta="V1 追蹤" /></div><div className="admin-grid"><article className="pipeline-card span-two"><div className="card-head"><span><strong>3D 資產發布管線</strong><small>正式圖面、Q 版資產、渲染資產與碰撞驗證</small></span><button><Plus />新增資產</button></div><div className="pipeline-steps">{[["圖面導入", "3 戶型", true], ["Q 版網格", "146 資產", true], ["渲染材質", "138 通過", true], ["碰撞／導覽網格", "8 待處理", false], ["建案發布", "v0.8 Alpha", false]].map(([title, subtitle, done], index) => <div key={String(title)} className={done ? "done" : ""}><span>{done ? <Check /> : index + 1}</span><strong>{title}</strong><small>{subtitle}</small></div>)}</div></article><article className="revenue-card"><div className="card-head"><span><strong>收入引擎</strong><small>金額均為 Alpha 示意</small></span></div>{[["建案年費與用量", 46, "#e77f5f"], ["自有家具成交", 38, "#6e9f8c"], ["渲染點數", 11, "#e0b34f"], ["聯盟分潤", 5, "#7285b2"]].map(([name, percent, color]) => <div className="revenue-row" key={String(name)}><span style={{ background: String(color) }} /><strong>{name}</strong><b>{percent}%</b></div>)}</article><article className="usage-card"><div className="card-head"><span><strong>方案用量</strong><small>固定年費＋基本用量</small></span></div><div className="usage-ring"><span><strong>68%</strong><small>本月</small></span></div><div className="usage-legend"><span>3D 流量 <b>4.8 TB</b></span><span>配置儲存 <b>12.6k</b></span><span>現場贈送渲染 <b>162</b></span></div></article></div></>;
+  return <><div className="stat-grid"><Stat icon={<Building2 />} label="啟用中提案" value="01" delta="Alpha" /><Stat icon={<Store />} label="自有品牌 SKU" value="168" delta="96% 有貨" /><Stat icon={<WandSparkles />} label="本月渲染任務" value="326" delta="98.7% 成功" /><Stat icon={<BadgePercent />} label="聯盟點擊" value="742" delta="V1 追蹤" /></div><div className="admin-grid"><article className="pipeline-card span-two"><div className="card-head"><span><strong>3D 資產發布管線</strong><small>正式圖面、Q 版資產、渲染資產與碰撞驗證</small></span><button><Plus />新增資產</button></div><div className="pipeline-steps">{[["圖面取得", "等待建商核驗圖面", false], ["Q 版網格", "提案資產可預覽", true], ["渲染材質", "家具樣本已通過", true], ["碰撞／導覽網格", "正式戶型待處理", false], ["建案發布", "概念提案 v0.9", false]].map(([title, subtitle, done], index) => <div key={String(title)} className={done ? "done" : ""}><span>{done ? <Check /> : index + 1}</span><strong>{title}</strong><small>{subtitle}</small></div>)}</div></article><article className="revenue-card"><div className="card-head"><span><strong>收入引擎</strong><small>金額均為 Alpha 示意</small></span></div>{[["建案年費與用量", 46, "#e77f5f"], ["自有家具成交", 38, "#6e9f8c"], ["渲染點數", 11, "#e0b34f"], ["聯盟分潤", 5, "#7285b2"]].map(([name, percent, color]) => <div className="revenue-row" key={String(name)}><span style={{ background: String(color) }} /><strong>{name}</strong><b>{percent}%</b></div>)}</article><article className="usage-card"><div className="card-head"><span><strong>方案用量</strong><small>固定年費＋基本用量</small></span></div><div className="usage-ring"><span><strong>68%</strong><small>本月</small></span></div><div className="usage-legend"><span>3D 流量 <b>4.8 TB</b></span><span>配置儲存 <b>12.6k</b></span><span>現場贈送渲染 <b>162</b></span></div></article></div></>;
 }
 
 function ModalShell({ children, onClose, wide = false }: { children: ReactNode; onClose: () => void; wide?: boolean }) { return <div className="modal-backdrop" role="dialog" aria-modal="true"><div className={`modal-card ${wide ? "wide" : ""}`}><button className="modal-close" onClick={onClose} aria-label="關閉"><X /></button>{children}</div></div>; }
@@ -676,3 +810,4 @@ function quaternionFromY(angle: number) { return { x: 0, y: Math.sin(angle / 2),
 function quaternionToY(q: { x: number; y: number; z: number; w: number }) { return Math.atan2(2 * (q.w * q.y + q.x * q.z), 1 - 2 * (q.y * q.y + q.z * q.z)); }
 function collides(id: string, x: number, z: number, product: FurnitureItem, items: SceneObjectV1[]) { return items.some((item) => { if (item.id === id) return false; const other = catalog.find((entry) => entry.sku === item.sku); if (!other) return false; const padding = 0.08; return Math.abs(x - item.position.x) < (product.size.width + other.size.width) / 2 - padding && Math.abs(z - item.position.z) < (product.size.depth + other.size.depth) / 2 - padding; }); }
 function findOpenSpot(product: FurnitureItem, items: SceneObjectV1[]): [number, number] | null { const spots: [number, number][] = [[2.8, -1.5], [-2.8, -1.5], [3, 1.8], [-3, 1.8], [0, -2.4], [0, 2.35], [2.5, 0]]; return spots.find(([x, z]) => !collides("new", x, z, product, items)) ?? null; }
+function apiMessage(error: unknown, fallback: string) { return error instanceof ApiClientError ? error.message : fallback; }

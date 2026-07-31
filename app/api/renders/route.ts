@@ -1,6 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { getDb } from "../../../db";
+import { getD1, getDb } from "../../../db";
 import { renderJobs, renderLedger } from "../../../db/schema";
 import { alphaTenantId, apiError, currentUser, idempotencyKey } from "../_shared";
 
@@ -39,15 +39,24 @@ export async function POST(request: Request) {
   const ledger = await db.select().from(renderLedger).where(eq(renderLedger.userId, user.userId));
   if (ledger.reduce((sum, entry) => sum + entry.delta, 0) < 1) return apiError("渲染點數不足", 402);
   const now = new Date().toISOString();
-  await db.insert(renderLedger).values({
-    id: `ledger:render:${id}`,
-    userId: user.userId,
-    delta: -1,
-    reason: "render_charge",
-    referenceType: "render_job",
-    referenceId: id,
-    createdAt: now,
-  }).onConflictDoNothing({ target: [renderLedger.userId, renderLedger.reason, renderLedger.referenceId] });
+  let chargeResult: D1Result;
+  try {
+    chargeResult = await getD1().prepare(`
+      INSERT INTO render_ledger
+        (id, user_id, delta, reason, reference_type, reference_id, created_at)
+      SELECT ?, ?, -1, 'render_charge', 'render_job', ?, ?
+      WHERE (
+        SELECT COALESCE(SUM(delta), 0)
+        FROM render_ledger
+        WHERE user_id = ?
+      ) >= 1
+    `).bind(`ledger:render:${id}`, user.userId, id, now, user.userId).run();
+  } catch {
+    const [racedJob] = await db.select().from(renderJobs).where(eq(renderJobs.id, id)).limit(1);
+    if (racedJob) return Response.json({ data: racedJob, idempotentReplay: true });
+    return apiError("渲染任務建立衝突，請重試", 409);
+  }
+  if (chargeResult.meta.changes !== 1) return apiError("渲染點數不足", 402);
   const job = {
     id,
     userId: user.userId,
@@ -60,6 +69,19 @@ export async function POST(request: Request) {
     createdAt: now,
     updatedAt: now,
   };
-  await db.insert(renderJobs).values(job).onConflictDoNothing({ target: renderJobs.id });
+  try {
+    await db.insert(renderJobs).values(job);
+  } catch {
+    await db.insert(renderLedger).values({
+      id: `ledger:render-refund:${id}`,
+      userId: user.userId,
+      delta: 1,
+      reason: "render_refund",
+      referenceType: "render_job",
+      referenceId: id,
+      createdAt: new Date().toISOString(),
+    }).onConflictDoNothing({ target: [renderLedger.userId, renderLedger.reason, renderLedger.referenceId] });
+    return apiError("任務未建立，點數已退還", 500);
+  }
   return Response.json({ data: job }, { status: 202 });
 }

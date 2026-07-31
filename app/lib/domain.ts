@@ -40,6 +40,7 @@ export type SceneSnapshotV1 = {
   camera: {
     position: Vec3;
     target: Vec3;
+    fov: number;
   };
   objects: SceneObjectV1[];
   savedAt: string;

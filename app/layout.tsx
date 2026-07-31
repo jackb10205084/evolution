@@ -7,13 +7,13 @@ export const metadata: Metadata = {
     default: "居遊所 Play Ground",
     template: "%s｜居遊所 Play Ground",
   },
-  description: "建案聯名、遊戲化居家配置與真實家具購物，一次完成你的未來生活提案。",
+  description: "以遠雄樂元公開資訊製作的建案聯名、遊戲化居家配置與家具導購概念提案。",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
   },
   openGraph: {
-    title: "先住進你的未來生活｜居遊所 Play Ground",
+    title: "遠雄樂元概念提案｜居遊所 Play Ground",
     description: "選格局、玩佈置、買家具、預約賞屋。",
     locale: "zh_TW",
     type: "website",

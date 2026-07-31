@@ -1,6 +1,9 @@
+import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../../../db";
-import { bookings, webhookDeliveries } from "../../../db/schema";
+import { bookings, idempotencyKeys, webhookDeliveries } from "../../../db/schema";
+import { sha256 } from "../../lib/server-hash";
+import { idempotencyRow, readIdempotentResponse, replayIdempotentResponse } from "../_idempotency";
 import { alphaProjectId, alphaTenantId, apiError, currentUser, idempotencyKey } from "../_shared";
 
 const createBooking = z.object({
@@ -18,6 +21,9 @@ export async function POST(request: Request) {
   if (!user) return apiError("請先登入", 401);
   const requestKey = idempotencyKey(request);
   if (!requestKey) return apiError("需要 Idempotency-Key", 400);
+  const scope = `booking:create:${user.userId}`;
+  const replay = await readIdempotentResponse(scope, requestKey);
+  if (replay) return replayIdempotentResponse(replay);
   const parsed = createBooking.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return apiError("預約資料格式不正確", 422, parsed.error.flatten());
 
@@ -45,8 +51,11 @@ export async function POST(request: Request) {
     createdAt: now,
     updatedAt: now,
   };
-  await getDb().insert(bookings).values(row).onConflictDoNothing({ target: bookings.id });
-  await getDb().insert(webhookDeliveries).values({
+  const responseBody = { data: { id, status: "pending", checkInToken, scheduledAt: parsed.data.scheduledAt } };
+  const db = getDb();
+  await db.batch([
+    db.insert(bookings).values(row).onConflictDoNothing({ target: bookings.id }),
+    db.insert(webhookDeliveries).values({
     id: deliveryId,
     tenantId: alphaTenantId,
     eventType: "booking.created",
@@ -56,13 +65,29 @@ export async function POST(request: Request) {
     status: "pending",
     createdAt: now,
     updatedAt: now,
-  }).onConflictDoNothing({ target: webhookDeliveries.id });
+    }).onConflictDoNothing({ target: webhookDeliveries.id }),
+    db.insert(idempotencyKeys).values(idempotencyRow(scope, requestKey, 201, responseBody))
+      .onConflictDoNothing({ target: [idempotencyKeys.scope, idempotencyKeys.key] }),
+  ]);
 
-  return Response.json({ data: { id, status: "pending", checkInToken } }, { status: 201 });
+  return Response.json(responseBody, { status: 201 });
 }
 
-async function sha256(value: string) {
-  const bytes = new TextEncoder().encode(value);
-  const hash = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(hash), (byte) => byte.toString(16).padStart(2, "0")).join("");
+export async function GET() {
+  const user = await currentUser();
+  if (!user) return apiError("請先登入", 401);
+  const rows = await getDb().select({
+    id: bookings.id,
+    floorplanId: bookings.floorplanId,
+    scheduledAt: bookings.scheduledAt,
+    status: bookings.status,
+    consentedAt: bookings.consentedAt,
+    checkedInAt: bookings.checkedInAt,
+    sharedSummaryJson: bookings.sharedSummaryJson,
+  }).from(bookings).where(eq(bookings.userId, user.userId)).orderBy(desc(bookings.createdAt));
+  return Response.json({ data: rows.map((row) => ({
+    ...row,
+    configurationSummary: JSON.parse(row.sharedSummaryJson),
+    sharedSummaryJson: undefined,
+  })) });
 }

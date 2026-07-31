@@ -1,7 +1,8 @@
 import { getChatGPTUser } from "../chatgpt-auth";
+import { proposalProject } from "../lib/project";
 
 export const alphaTenantId = "tenant-homeplay";
-export const alphaProjectId = "project-riverside-green";
+export const alphaProjectId = proposalProject.id;
 
 export async function currentUser() {
   const authenticated = await getChatGPTUser();

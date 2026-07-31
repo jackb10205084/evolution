@@ -12,9 +12,10 @@ test("builds the branded co-marketing experience", async () => {
     readdir(new URL("../dist/client/assets/", import.meta.url)),
   ]);
   assert.match(layout, /lang="zh-Hant"/);
-  assert.match(page, /居遊所 Play Ground × 河岸青/);
-  assert.match(experience, /森沐建設 × 居遊所 Play Ground/);
-  assert.match(experience, /先住進你的/);
+  assert.match(page, /居遊所 Play Ground × 遠雄樂元｜概念提案/);
+  assert.match(experience, /proposalProject\.name.*居遊所 Play Ground/);
+  assert.match(experience, /未委託概念提案/);
+  assert.match(experience, /把自然遊園/);
   assert.match(experience, /開始打造我的家/);
   assert.ok(clientAssets.some((file) => file.startsWith("home-play-app-") && file.endsWith(".js")));
   assert.ok(clientAssets.some((file) => file.startsWith("experience-canvas-") && file.endsWith(".js")));
@@ -23,15 +24,17 @@ test("builds the branded co-marketing experience", async () => {
 });
 
 test("publishes a versioned experience manifest contract", async () => {
-  const [manifest, catalog] = await Promise.all([
+  const [manifest, catalog, project] = await Promise.all([
     readFile(new URL("../app/api/v1/experience/manifest/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/lib/catalog.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/lib/project.ts", import.meta.url), "utf8"),
   ]);
   assert.match(manifest, /schemaVersion: "1\.0"/);
-  assert.match(manifest, /name: "河岸青"/);
+  assert.match(project, /name: "遠雄樂元"/);
+  assert.match(project, /farglory-realty\.com\.tw\/buildings\/bh7/);
   assert.match(manifest, /photorealRender: "adapter"/);
   assert.match(manifest, /socialLogin: \["google", "apple", "line"\]/);
-  assert.equal((catalog.match(/area: "/g) ?? []).length, 3);
+  assert.equal((catalog.match(/area: "/g) ?? []).length, 4);
   assert.equal((catalog.match(/palette:/g) ?? []).length, 5);
   assert.ok((catalog.match(/assetVersion:/g) ?? []).length >= 8);
 });
