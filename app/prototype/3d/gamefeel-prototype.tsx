@@ -15,9 +15,13 @@ import {
   Home,
   MousePointer2,
   PackagePlus,
+  Redo2,
   RotateCw,
+  ShoppingBag,
   Sparkles,
   Sun,
+  Trash2,
+  Undo2,
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -25,7 +29,7 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import styles from "./gamefeel-prototype.module.css";
 
-type Variant = "A" | "B" | "C";
+type Variant = "A" | "B" | "C" | "D";
 type FurnitureId = "sofa" | "table" | "chair" | "lamp" | "plant" | "shelf";
 type FurnitureState = { id: FurnitureId; x: number; z: number; rotation: number };
 
@@ -33,6 +37,7 @@ const variantMeta: Record<Variant, { name: string; subtitle: string }> = {
   A: { name: "Cozy Dollhouse", subtitle: "溫暖模型屋" },
   B: { name: "Smart Planner", subtitle: "精準俯視配置" },
   C: { name: "Living Story", subtitle: "角色探索生活" },
+  D: { name: "Cozy Critter Home", subtitle: "原創 Q 版生活遊戲精修" },
 };
 
 const initialFurniture: FurnitureState[] = [
@@ -44,13 +49,13 @@ const initialFurniture: FurnitureState[] = [
   { id: "shelf", x: -3.8, z: -2.4, rotation: 0 },
 ];
 
-const furnitureLabel: Record<FurnitureId, { name: string; price: string; emoji: string }> = {
-  sofa: { name: "雲朵雙人沙發", price: "$42,800", emoji: "🛋️" },
-  table: { name: "小石橢圓桌", price: "$12,800", emoji: "🪵" },
-  chair: { name: "微風扶手椅", price: "$16,800", emoji: "🪑" },
-  lamp: { name: "小月球立燈", price: "$7,600", emoji: "💡" },
-  plant: { name: "橄欖樹植栽", price: "$3,200", emoji: "🌿" },
-  shelf: { name: "小屋模組收納櫃", price: "$21,800", emoji: "🏠" },
+const furnitureLabel: Record<FurnitureId, { name: string; price: string; amount: number; dimensions: string; emoji: string }> = {
+  sofa: { name: "雲朵雙人沙發", price: "$42,800", amount: 42800, dimensions: "W 215 × D 92 × H 82 cm", emoji: "🛋️" },
+  table: { name: "小石橢圓桌", price: "$12,800", amount: 12800, dimensions: "W 120 × D 68 × H 42 cm", emoji: "🪵" },
+  chair: { name: "微風扶手椅", price: "$16,800", amount: 16800, dimensions: "W 78 × D 82 × H 80 cm", emoji: "🪑" },
+  lamp: { name: "小月球立燈", price: "$7,600", amount: 7600, dimensions: "W 38 × D 38 × H 168 cm", emoji: "💡" },
+  plant: { name: "橄欖樹植栽", price: "$3,200", amount: 3200, dimensions: "W 52 × D 52 × H 165 cm", emoji: "🌿" },
+  shelf: { name: "小屋模組收納櫃", price: "$21,800", amount: 21800, dimensions: "W 155 × D 46 × H 198 cm", emoji: "🏠" },
 };
 
 export function GamefeelPrototype({ initialVariant }: { initialVariant: Variant }) {
@@ -58,7 +63,7 @@ export function GamefeelPrototype({ initialVariant }: { initialVariant: Variant 
   const [variant, setVariant] = useState<Variant>(initialVariant);
   const [selectedId, setSelectedId] = useState<FurnitureId>("sofa");
   const [furniture, setFurniture] = useState(initialFurniture);
-  const variants: Variant[] = ["A", "B", "C"];
+  const variants: Variant[] = ["A", "B", "C", "D"];
 
   const switchVariant = (direction: -1 | 1) => {
     const current = variants.indexOf(variant);
@@ -88,6 +93,7 @@ export function GamefeelPrototype({ initialVariant }: { initialVariant: Variant 
       {variant === "A" && <CozyDollhouseVariant {...shared} />}
       {variant === "B" && <PlannerVariant {...shared} />}
       {variant === "C" && <ExploreVariant furniture={furniture} />}
+      {variant === "D" && <CuteCritterVariant />}
       {process.env.NODE_ENV !== "production" && (
         <nav className={styles.prototypeSwitcher} aria-label="原型版本切換">
           <button onClick={() => switchVariant(-1)} aria-label="上一個版本"><ChevronLeft /></button>
@@ -217,6 +223,351 @@ function ExploreVariant({ furniture }: { furniture: FurnitureState[] }) {
   );
 }
 
+type PlayMode = "decorate" | "walk";
+
+function CuteCritterVariant() {
+  const [mode, setMode] = useState<PlayMode>("decorate");
+  const [selectedId, setSelectedId] = useState<FurnitureId>("sofa");
+  const [furniture, setFurniture] = useState<FurnitureState[]>(initialFurniture);
+  const [undoStack, setUndoStack] = useState<FurnitureState[][]>([]);
+  const [redoStack, setRedoStack] = useState<FurnitureState[][]>([]);
+  const [dragging, setDragging] = useState(false);
+  const latestFurniture = useRef(furniture);
+  const dragOrigin = useRef<FurnitureState[] | null>(null);
+  const touchMove = useRef({ x: 0, z: 0 });
+
+  const cloneFurniture = (items: FurnitureState[]) => items.map((item) => ({ ...item }));
+  const updateFurniture = (next: FurnitureState[]) => {
+    latestFurniture.current = next;
+    setFurniture(next);
+  };
+  const commit = (next: FurnitureState[]) => {
+    setUndoStack((stack) => [...stack.slice(-19), cloneFurniture(latestFurniture.current)]);
+    setRedoStack([]);
+    updateFurniture(next);
+  };
+  const moveFurniture = (id: FurnitureId, x: number, z: number) => {
+    updateFurniture(latestFurniture.current.map((item) => item.id === id ? { ...item, x, z } : item));
+  };
+  const beginDrag = () => {
+    dragOrigin.current = cloneFurniture(latestFurniture.current);
+    setDragging(true);
+  };
+  const endDrag = () => {
+    const origin = dragOrigin.current;
+    if (origin && JSON.stringify(origin) !== JSON.stringify(latestFurniture.current)) {
+      setUndoStack((stack) => [...stack.slice(-19), origin]);
+      setRedoStack([]);
+    }
+    dragOrigin.current = null;
+    setDragging(false);
+  };
+  const rotateSelected = () => commit(latestFurniture.current.map((item) => item.id === selectedId ? { ...item, rotation: item.rotation + Math.PI / 4 } : item));
+  const removeSelected = () => commit(latestFurniture.current.filter((item) => item.id !== selectedId));
+  const selectOrAdd = (id: FurnitureId) => {
+    setSelectedId(id);
+    if (!latestFurniture.current.some((item) => item.id === id)) commit([...latestFurniture.current, { id, x: 0, z: 0, rotation: 0 }]);
+  };
+  const undo = () => {
+    const previous = undoStack.at(-1);
+    if (!previous) return;
+    setRedoStack((stack) => [...stack, cloneFurniture(latestFurniture.current)]);
+    setUndoStack((stack) => stack.slice(0, -1));
+    updateFurniture(cloneFurniture(previous));
+  };
+  const redo = () => {
+    const next = redoStack.at(-1);
+    if (!next) return;
+    setUndoStack((stack) => [...stack, cloneFurniture(latestFurniture.current)]);
+    setRedoStack((stack) => stack.slice(0, -1));
+    updateFurniture(cloneFurniture(next));
+  };
+  const setTouchDirection = (x: number, z: number) => { touchMove.current = { x, z }; };
+  const stopTouch = () => { touchMove.current = { x: 0, z: 0 }; };
+  const selected = furnitureLabel[selectedId];
+  const total = furniture.reduce((sum, item) => sum + furnitureLabel[item.id].amount, 0);
+
+  return (
+    <section className={`${styles.variantShell} ${styles.cuteShell}`}>
+      <div className={styles.cuteCanvas}>
+        <Canvas shadows dpr={[1, 1.5]} camera={{ position: [8.8, 7.5, 10.2], fov: 35 }}>
+          <color attach="background" args={["#9ed9cd"]} />
+          <fog attach="fog" args={["#9ed9cd", 17, 31]} />
+          <ambientLight intensity={1.45} />
+          <hemisphereLight args={["#e9fbff", "#8a6a48", 1.15]} />
+          <directionalLight castShadow position={[5, 12, 7]} intensity={2.8} color="#fff1bf" shadow-mapSize={[1536, 1536]} shadow-bias={-0.0003} />
+          <CuteCottageRoom />
+          {mode === "decorate" ? (
+            <>
+              <CuteFurnitureCollection
+                items={furniture}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+                onMove={moveFurniture}
+                onDragStart={beginDrag}
+                onDragEnd={endDrag}
+              />
+              <CapybaraIdle />
+              <DecorateCameraRig />
+              <OrbitControls makeDefault enabled={!dragging} enablePan={false} minDistance={8} maxDistance={15} minPolarAngle={0.63} maxPolarAngle={1.05} target={[0, 0.72, -0.15]} />
+            </>
+          ) : (
+            <>
+              <FurnitureCollection items={furniture} selectedId={null} soft />
+              <CritterWalker touchMove={touchMove} />
+            </>
+          )}
+          <RoomSparkles />
+          <ContactShadows position={[0, 0.025, 0]} opacity={0.34} scale={17} blur={2.8} far={8} />
+        </Canvas>
+      </div>
+
+      <header className={styles.cuteTopbar}>
+        <BrandMark />
+        <span className={styles.cuteLocation}><small>遠雄樂元 × 居遊所</small><strong>午後森林宅 · 21 坪</strong></span>
+        <div className={styles.cuteModeSwitch} aria-label="體驗模式">
+          <button className={mode === "decorate" ? styles.cuteModeActive : ""} onClick={() => setMode("decorate")}><Grid3X3 />佈置</button>
+          <button className={mode === "walk" ? styles.cuteModeActive : ""} onClick={() => { setMode("walk"); setDragging(false); }}><Gamepad2 />散步</button>
+        </div>
+        <span className={styles.cutePrice}><small>房間家具</small><strong>${total.toLocaleString("zh-TW")}</strong></span>
+        <div className={styles.cuteTopActions}><button aria-label="拍照"><Camera /></button><button aria-label="切換日光"><Sun /></button></div>
+      </header>
+
+      <div className={styles.cuteQuest}><i><Sparkles /></i><span><small>小屋心情</small><strong>暖暖入住中</strong></span><b>96</b></div>
+
+      {mode === "decorate" ? (
+        <>
+          <aside className={styles.cuteInspector}>
+            <span className={styles.cuteSpeechTail} />
+            <div className={styles.cuteProductHero}><FurnitureToken id={selectedId} /><span>自有品牌</span></div>
+            <small>目前選取</small>
+            <h2>{selected.name}</h2>
+            <strong>{selected.price}</strong>
+            <p>{selected.dimensions}</p>
+            <div className={styles.cuteInspectorActions}>
+              <button onClick={rotateSelected}><RotateCw />轉 45°</button>
+              <button onClick={removeSelected} disabled={!furniture.some((item) => item.id === selectedId)}><Trash2 />收起</button>
+            </div>
+            <button className={styles.cuteShopButton}><ShoppingBag />放入購物車</button>
+          </aside>
+          <div className={styles.cuteHistory}>
+            <button onClick={undo} disabled={!undoStack.length} aria-label="復原"><Undo2 /></button>
+            <button onClick={redo} disabled={!redoStack.length} aria-label="重做"><Redo2 /></button>
+          </div>
+          <div className={styles.cuteSnapHint}><MousePointer2 /><span><strong>拖曳家具到喜歡的位置</strong><small>自動吸附 25 cm · 物理碰撞驗證中</small></span><Check /></div>
+        </>
+      ) : (
+        <>
+          <div className={styles.cuteTalkBubble}><span>嗨！我是住在這裡的<strong>栗栗</strong></span><small>靠近家具就能看看價格喔！</small></div>
+          <div className={styles.cuteWalkHint}><Gamepad2 /><span><strong>在新家散散步</strong><small>鍵盤 WASD 或使用方向鍵盤</small></span></div>
+          <div className={styles.cuteDpad} aria-label="移動方向鍵">
+            <button className={styles.dpadUp} onPointerDown={() => setTouchDirection(0, -1)} onPointerUp={stopTouch} onPointerLeave={stopTouch}>↑</button>
+            <button className={styles.dpadLeft} onPointerDown={() => setTouchDirection(-1, 0)} onPointerUp={stopTouch} onPointerLeave={stopTouch}>←</button>
+            <button className={styles.dpadRight} onPointerDown={() => setTouchDirection(1, 0)} onPointerUp={stopTouch} onPointerLeave={stopTouch}>→</button>
+            <button className={styles.dpadDown} onPointerDown={() => setTouchDirection(0, 1)} onPointerUp={stopTouch} onPointerLeave={stopTouch}>↓</button>
+          </div>
+        </>
+      )}
+
+      <nav className={styles.cuteBag} aria-label="家具袋">
+        <span className={styles.cuteBagTitle}><ShoppingBag /><i><strong>家具袋</strong><small>{furniture.length} / 20</small></i></span>
+        <div>{(Object.keys(furnitureLabel) as FurnitureId[]).map((id) => {
+          const placed = furniture.some((item) => item.id === id);
+          return <button key={id} className={selectedId === id ? styles.cuteBagActive : ""} onClick={() => selectOrAdd(id)}><FurnitureToken id={id} /><small>{furnitureLabel[id].name}</small>{!placed && <b>＋</b>}</button>;
+        })}</div>
+      </nav>
+      <span className={styles.cuteOriginalTag}><Sparkles />原創 Q 版生活模擬 · 操作原型</span>
+    </section>
+  );
+}
+
+function FurnitureToken({ id }: { id: FurnitureId }) {
+  const tokenClass: Record<FurnitureId, string> = {
+    sofa: styles.tokenSofa,
+    table: styles.tokenTable,
+    chair: styles.tokenChair,
+    lamp: styles.tokenLamp,
+    plant: styles.tokenPlant,
+    shelf: styles.tokenShelf,
+  };
+  return <span className={`${styles.furnitureToken} ${tokenClass[id]}`} aria-hidden="true"><i /></span>;
+}
+
+function CuteFurnitureCollection({ items, selectedId, onSelect, onMove, onDragStart, onDragEnd }: {
+  items: FurnitureState[];
+  selectedId: FurnitureId;
+  onSelect: (id: FurnitureId) => void;
+  onMove: (id: FurnitureId, x: number, z: number) => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+}) {
+  return <>{items.map((item) => <CuteDraggableFurniture key={item.id} item={item} selected={item.id === selectedId} onSelect={onSelect} onMove={onMove} onDragStart={onDragStart} onDragEnd={onDragEnd} />)}</>;
+}
+
+function CuteDraggableFurniture({ item, selected, onSelect, onMove, onDragStart, onDragEnd }: {
+  item: FurnitureState;
+  selected: boolean;
+  onSelect: (id: FurnitureId) => void;
+  onMove: (id: FurnitureId, x: number, z: number) => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+}) {
+  const ref = useRef<THREE.Group>(null);
+  const dragging = useRef(false);
+  const dragPlane = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
+  const hit = useRef(new THREE.Vector3());
+  const offset = useRef(new THREE.Vector2());
+  const getGroundPoint = (event: ThreeEvent<PointerEvent>) => event.ray.intersectPlane(dragPlane.current, hit.current);
+  const onPointerDown = (event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation();
+    const point = getGroundPoint(event);
+    if (!point) return;
+    onSelect(item.id);
+    dragging.current = true;
+    offset.current.set(point.x - item.x, point.z - item.z);
+    const target = event.nativeEvent.target;
+    if (target instanceof Element) target.setPointerCapture(event.pointerId);
+    onDragStart();
+  };
+  const onPointerMove = (event: ThreeEvent<PointerEvent>) => {
+    if (!dragging.current) return;
+    event.stopPropagation();
+    const point = getGroundPoint(event);
+    if (!point) return;
+    const snap = (value: number) => Math.round(value * 4) / 4;
+    onMove(item.id, snap(THREE.MathUtils.clamp(point.x - offset.current.x, -4.35, 4.35)), snap(THREE.MathUtils.clamp(point.z - offset.current.y, -2.9, 2.75)));
+  };
+  const stopDragging = (event: ThreeEvent<PointerEvent>) => {
+    if (!dragging.current) return;
+    event.stopPropagation();
+    dragging.current = false;
+    const target = event.nativeEvent.target;
+    if (target instanceof Element && target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId);
+    onDragEnd();
+  };
+  useFrame((state, delta) => {
+    if (!ref.current) return;
+    const targetScale = selected ? 1.065 : 1;
+    const scale = THREE.MathUtils.damp(ref.current.scale.x, targetScale, 10, delta);
+    ref.current.scale.setScalar(scale);
+    ref.current.position.y = selected ? 0.018 + Math.sin(state.clock.elapsedTime * 4) * 0.012 : THREE.MathUtils.damp(ref.current.position.y, 0, 12, delta);
+  });
+  return (
+    <group ref={ref} position={[item.x, 0, item.z]} rotation={[0, item.rotation, 0]} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={stopDragging} onPointerCancel={stopDragging}>
+      <FurnitureModel id={item.id} soft />
+      {selected && <SelectionHalo />}
+    </group>
+  );
+}
+
+function CuteCottageRoom() {
+  return (
+    <group>
+      <RoundedBox args={[13.4, 0.25, 10.3]} radius={0.1} smoothness={5} position={[0, -0.34, 0]} receiveShadow><meshStandardMaterial color="#78b88b" roughness={0.95} /></RoundedBox>
+      <RoundedBox args={[10.8, 0.35, 7.45]} radius={0.14} smoothness={5} position={[0, -0.12, -0.05]} receiveShadow><meshStandardMaterial color="#e3b777" roughness={0.82} /></RoundedBox>
+      {[-4.2, -2.8, -1.4, 0, 1.4, 2.8, 4.2].map((x) => <mesh key={x} position={[x, 0.075, -0.05]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[0.025, 7]} /><meshBasicMaterial color="#b98355" transparent opacity={0.42} /></mesh>)}
+      <RoundedBox args={[10.8, 3.65, 0.3]} radius={0.18} smoothness={5} position={[0, 1.69, -3.62]} receiveShadow castShadow><meshStandardMaterial color="#fff0cf" roughness={0.92} /></RoundedBox>
+      <RoundedBox args={[0.3, 3.65, 7.35]} radius={0.18} smoothness={5} position={[-5.26, 1.69, -0.02]} receiveShadow castShadow><meshStandardMaterial color="#f7d9b7" roughness={0.92} /></RoundedBox>
+      <RoundedBox args={[10.5, 0.18, 0.2]} radius={0.08} smoothness={4} position={[0, 0.36, -3.42]}><meshStandardMaterial color="#dda078" /></RoundedBox>
+      <CuteWindow />
+      <CuteWallArt />
+      <RoundedBox args={[4.05, 0.06, 2.5]} radius={0.3} smoothness={7} position={[-0.3, 0.03, 0.3]} receiveShadow><meshStandardMaterial color="#f3d884" roughness={1} /></RoundedBox>
+      {[[-5.7, -3.7], [-4.9, 3.4], [5.3, -3.7], [5.8, 3.25]].map(([x, z], index) => <group key={index} position={[x, -0.12, z]}><mesh receiveShadow><cylinderGeometry args={[0.28, 0.34, 0.14, 12]} /><meshStandardMaterial color="#e9d4ac" /></mesh><mesh position={[0, 0.22, 0]}><icosahedronGeometry args={[0.34, 1]} /><meshStandardMaterial color={index % 2 ? "#f6b070" : "#fff0a8"} /></mesh></group>)}
+      <Float speed={0.8} floatIntensity={0.18}><group position={[5.5, 4.2, -5.2]}><mesh scale={[1.4, 0.65, 0.75]}><sphereGeometry args={[0.62, 20, 15]} /><meshStandardMaterial color="#f8ffff" transparent opacity={0.86} /></mesh><mesh position={[0.75, 0.05, 0]} scale={[0.8, 0.52, 0.62]}><sphereGeometry args={[0.62, 20, 15]} /><meshStandardMaterial color="#f8ffff" transparent opacity={0.86} /></mesh></group></Float>
+    </group>
+  );
+}
+
+function CuteWindow() {
+  return <group position={[3.35, 1.78, -3.43]}><RoundedBox args={[2.85, 2.15, 0.16]} radius={0.12} smoothness={5}><meshStandardMaterial color="#5d8c80" /></RoundedBox><mesh position={[0, 0, 0.1]}><planeGeometry args={[2.52, 1.82]} /><meshStandardMaterial color="#96dbe4" emissive="#83d0dc" emissiveIntensity={0.18} /></mesh><mesh position={[0, 0, 0.2]}><boxGeometry args={[0.09, 1.82, 0.06]} /><meshStandardMaterial color="#fff4d9" /></mesh><mesh position={[0, -0.42, 0.2]}><boxGeometry args={[2.48, 0.09, 0.06]} /><meshStandardMaterial color="#fff4d9" /></mesh>{[-1.25, 1.25].map((x) => <RoundedBox key={x} args={[0.65, 2.35, 0.16]} radius={0.23} smoothness={6} position={[x, 0, 0.28]} rotation={[0, 0, x < 0 ? -0.08 : 0.08]}><meshStandardMaterial color="#ee927d" roughness={0.9} /></RoundedBox>)}<RoundedBox args={[3.2, 0.32, 0.22]} radius={0.13} smoothness={5} position={[0, 1.18, 0.22]}><meshStandardMaterial color="#f2bd72" /></RoundedBox></group>;
+}
+
+function CuteWallArt() {
+  return <group position={[-1.7, 2.05, -3.42]}><RoundedBox args={[1.65, 1.25, 0.14]} radius={0.12} smoothness={5}><meshStandardMaterial color="#a8664d" /></RoundedBox><RoundedBox args={[1.38, 0.98, 0.08]} radius={0.09} smoothness={5} position={[0, 0, 0.09]}><meshStandardMaterial color="#fff5d9" /></RoundedBox><mesh position={[0.2, -0.12, 0.16]}><circleGeometry args={[0.35, 24]} /><meshStandardMaterial color="#efad68" /></mesh><mesh position={[-0.3, 0.16, 0.17]} rotation={[0, 0, -0.42]} scale={[0.4, 0.65, 1]}><circleGeometry args={[0.34, 20]} /><meshStandardMaterial color="#75a983" /></mesh></group>;
+}
+
+function RoomSparkles() {
+  return <group>{[[-4.2, 2.3, 1.9], [4.45, 2.7, 0.3], [1.8, 2.45, -2.3]].map((position, index) => <Float key={index} speed={1.4 + index * 0.2} floatIntensity={0.2}><mesh position={position as [number, number, number]} scale={0.7 + index * 0.12}><octahedronGeometry args={[0.09]} /><meshStandardMaterial color="#fff3a2" emissive="#ffd968" emissiveIntensity={1.3} /></mesh></Float>)}</group>;
+}
+
+function CapybaraModel() {
+  const eyes = useRef<THREE.Group>(null);
+  useFrame((state) => {
+    if (!eyes.current) return;
+    const blink = Math.sin(state.clock.elapsedTime * 0.82) > 0.985 ? 0.12 : 1;
+    eyes.current.scale.y = THREE.MathUtils.lerp(eyes.current.scale.y, blink, 0.45);
+  });
+  return (
+    <group scale={0.92}>
+      <mesh castShadow position={[0, 0.72, 0]} scale={[0.72, 0.88, 0.62]}><sphereGeometry args={[0.58, 28, 20]} /><meshStandardMaterial color="#a96f49" roughness={0.88} /></mesh>
+      <RoundedBox args={[0.9, 0.78, 0.58]} radius={0.28} smoothness={7} position={[0, 0.65, 0.02]} castShadow><meshStandardMaterial color="#6fae91" roughness={0.86} /></RoundedBox>
+      <mesh castShadow position={[0, 1.45, 0.04]} scale={[0.86, 0.78, 0.8]}><sphereGeometry args={[0.62, 32, 22]} /><meshStandardMaterial color="#bd8257" roughness={0.9} /></mesh>
+      {[-0.42, 0.42].map((x) => <mesh key={x} castShadow position={[x, 1.82, 0]} scale={[0.72, 0.75, 0.68]}><sphereGeometry args={[0.2, 20, 15]} /><meshStandardMaterial color="#9a623f" /></mesh>)}
+      <mesh castShadow position={[0, 1.3, 0.54]} scale={[1.05, 0.67, 0.72]}><sphereGeometry args={[0.38, 28, 19]} /><meshStandardMaterial color="#d5a273" roughness={0.92} /></mesh>
+      <mesh position={[0, 1.42, 0.82]} scale={[1.2, 0.72, 0.5]}><sphereGeometry args={[0.12, 18, 12]} /><meshStandardMaterial color="#4e3b34" roughness={0.72} /></mesh>
+      <group ref={eyes}>{[-0.24, 0.24].map((x) => <group key={x}><mesh position={[x, 1.57, 0.55]}><sphereGeometry args={[0.075, 16, 12]} /><meshBasicMaterial color="#413832" /></mesh><mesh position={[x - 0.018, 1.6, 0.615]}><sphereGeometry args={[0.018, 10, 8]} /><meshBasicMaterial color="#fff" /></mesh></group>)}</group>
+      {[-0.38, 0.38].map((x) => <mesh key={x} position={[x, 1.35, 0.55]} scale={[1.3, 0.55, 0.35]}><sphereGeometry args={[0.12, 18, 12]} /><meshBasicMaterial color="#e98f82" transparent opacity={0.7} /></mesh>)}
+      <mesh position={[0, 1.22, 0.82]}><boxGeometry args={[0.11, 0.12, 0.035]} /><meshStandardMaterial color="#fff6dc" /></mesh>
+      {[-0.42, 0.42].map((x) => <mesh key={x} castShadow position={[x, 0.7, 0.16]} rotation={[0, 0, x < 0 ? -0.22 : 0.22]}><capsuleGeometry args={[0.1, 0.38, 6, 12]} /><meshStandardMaterial color="#bd8257" /></mesh>)}
+      {[-0.23, 0.23].map((x) => <group key={x}><RoundedBox args={[0.22, 0.43, 0.27]} radius={0.09} smoothness={4} position={[x, 0.22, 0]} castShadow><meshStandardMaterial color="#7a9bc0" /></RoundedBox><mesh position={[x, 0.055, 0.11]} scale={[1.2, 0.55, 1.45]}><sphereGeometry args={[0.15, 16, 10]} /><meshStandardMaterial color="#704d3a" /></mesh></group>)}
+      <RoundedBox args={[0.54, 0.36, 0.08]} radius={0.08} smoothness={4} position={[0, 0.72, 0.34]}><meshStandardMaterial color="#f4c870" /></RoundedBox>
+    </group>
+  );
+}
+
+function CapybaraIdle() {
+  const ref = useRef<THREE.Group>(null);
+  useFrame((state, delta) => {
+    if (!ref.current) return;
+    ref.current.position.y = 0.04 + Math.sin(state.clock.elapsedTime * 2.1) * 0.025;
+    ref.current.rotation.y = THREE.MathUtils.damp(ref.current.rotation.y, 0.64 + Math.sin(state.clock.elapsedTime * 0.65) * 0.08, 4, delta);
+  });
+  return <group ref={ref} position={[3.15, 0, -0.45]}><CapybaraModel /></group>;
+}
+
+function DecorateCameraRig() {
+  const { camera, size } = useThree();
+  useEffect(() => {
+    const distance = size.width / size.height < 1 ? 1.35 : 1;
+    camera.position.set(8.8 * distance, 7.5 * distance, 10.2 * distance);
+    camera.lookAt(0, 0.72, -0.15);
+    camera.updateProjectionMatrix();
+  }, [camera, size.height, size.width]);
+  return null;
+}
+
+function CritterWalker({ touchMove }: { touchMove: { current: { x: number; z: number } } }) {
+  const ref = useRef<THREE.Group>(null);
+  const keys = useRef<Record<string, boolean>>({});
+  const { camera } = useThree();
+  const step = useRef(0);
+  useEffect(() => {
+    const down = (event: KeyboardEvent) => { keys.current[event.key.toLowerCase()] = true; };
+    const up = (event: KeyboardEvent) => { keys.current[event.key.toLowerCase()] = false; };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); };
+  }, []);
+  useFrame((_, delta) => {
+    if (!ref.current) return;
+    const x = THREE.MathUtils.clamp(Number(Boolean(keys.current.d)) - Number(Boolean(keys.current.a)) + touchMove.current.x, -1, 1);
+    const z = THREE.MathUtils.clamp(Number(Boolean(keys.current.s)) - Number(Boolean(keys.current.w)) + touchMove.current.z, -1, 1);
+    const moving = x !== 0 || z !== 0;
+    if (moving) {
+      const length = Math.hypot(x, z);
+      ref.current.position.x = THREE.MathUtils.clamp(ref.current.position.x + x / length * delta * 2.05, -4.3, 4.3);
+      ref.current.position.z = THREE.MathUtils.clamp(ref.current.position.z + z / length * delta * 2.05, -2.85, 2.65);
+      ref.current.rotation.y = THREE.MathUtils.damp(ref.current.rotation.y, Math.atan2(x, z), 14, delta);
+      step.current += delta * 9;
+      ref.current.position.y = Math.abs(Math.sin(step.current)) * 0.055;
+    } else ref.current.position.y = THREE.MathUtils.damp(ref.current.position.y, 0, 9, delta);
+    const target = new THREE.Vector3(ref.current.position.x, 2.75, ref.current.position.z + 5.7);
+    camera.position.lerp(target, 1 - Math.pow(0.005, delta));
+    camera.lookAt(ref.current.position.x, 0.9, ref.current.position.z - 0.8);
+  });
+  return <group ref={ref} position={[2.8, 0, 2]}><CapybaraModel /></group>;
+}
+
 function BrandMark() {
   return <span className={styles.brandMark}><i><Home /></i><span><strong>居遊所</strong><small>PLAY GROUND</small></span></span>;
 }
@@ -282,7 +633,7 @@ function FurnitureModel({ id, soft }: { id: FurnitureId; soft: boolean }) {
     case "chair": return <group><RoundedBox args={[0.82, 0.24, 0.78]} radius={0.12} smoothness={5} position={[0, 0.5, 0]} castShadow><meshStandardMaterial color={green} /></RoundedBox><RoundedBox args={[0.78, 0.72, 0.2]} radius={0.14} smoothness={5} position={[0, 0.91, 0.29]} rotation={[-0.1, 0, 0]} castShadow><meshStandardMaterial color={green} /></RoundedBox>{[-0.29, 0.29].flatMap((x) => [-0.25, 0.25].map((z) => <mesh key={`${x}-${z}`} position={[x, 0.24, z]} castShadow><cylinderGeometry args={[0.045, 0.06, 0.48, 10]} /><meshStandardMaterial color="#795b45" /></mesh>))}</group>;
     case "lamp": return <group><mesh castShadow position={[0, 0.08, 0]}><cylinderGeometry args={[0.27, 0.34, 0.16, 20]} /><meshStandardMaterial color="#53766d" /></mesh><mesh castShadow position={[0, 0.84, 0]}><cylinderGeometry args={[0.045, 0.055, 1.52, 12]} /><meshStandardMaterial color="#53766d" /></mesh><Float speed={1.2} floatIntensity={0.03}><mesh position={[0, 1.65, 0]} castShadow><sphereGeometry args={[0.36, 24, 18]} /><meshStandardMaterial color="#f9db7d" emissive="#f5c85f" emissiveIntensity={0.85} /></mesh></Float><pointLight position={[0, 1.55, 0]} color="#ffd98a" intensity={2.2} distance={3} /></group>;
     case "plant": return <group><RoundedBox args={[0.66, 0.55, 0.66]} radius={0.12} smoothness={5} position={[0, 0.27, 0]} castShadow><meshStandardMaterial color="#c9835d" /></RoundedBox><mesh position={[0, 0.98, 0]} castShadow><cylinderGeometry args={[0.06, 0.09, 1.35, 9]} /><meshStandardMaterial color="#755541" /></mesh>{[[0, 1.55, 0], [-0.25, 1.28, 0.08], [0.27, 1.2, -0.08], [0.11, 1.75, 0.04]].map((p, index) => <mesh key={index} position={p as [number, number, number]} scale={[0.46, 0.58, 0.42]} castShadow><icosahedronGeometry args={[0.5, 1]} /><meshStandardMaterial color={index % 2 ? "#6c9c73" : "#82b17e"} roughness={0.9} /></mesh>)}</group>;
-    case "shelf": return <group><RoundedBox args={[1.55, 1.7, 0.46]} radius={0.12} smoothness={5} position={[0, 0.85, 0]} castShadow><meshStandardMaterial color="#ba8156" /></RoundedBox>{[0.45, 0.9, 1.33].map((y) => <RoundedBox key={y} args={[1.35, 0.08, 0.5]} radius={0.03} smoothness={3} position={[0, y, -0.05]}><meshStandardMaterial color="#f0cf9b" /></RoundedBox>)}<mesh position={[0, 1.98, 0]} rotation={[0, 0, Math.PI / 4]}><boxGeometry args={[1.1, 1.1, 0.45]} /><meshStandardMaterial color="#ba8156" /></mesh></group>;
+    case "shelf": return <group><RoundedBox args={[1.55, 1.7, 0.46]} radius={0.12} smoothness={5} position={[0, 0.85, 0]} castShadow><meshStandardMaterial color="#ba8156" /></RoundedBox>{[0.45, 0.9, 1.33].map((y) => <RoundedBox key={y} args={[1.35, 0.08, 0.5]} radius={0.03} smoothness={3} position={[0, y, -0.05]}><meshStandardMaterial color="#f0cf9b" /></RoundedBox>)}<RoundedBox args={[1.12, 0.18, 0.54]} radius={0.07} smoothness={4} position={[-0.4, 1.96, 0]} rotation={[0, 0, 0.55]} castShadow><meshStandardMaterial color="#a96f4d" /></RoundedBox><RoundedBox args={[1.12, 0.18, 0.54]} radius={0.07} smoothness={4} position={[0.4, 1.96, 0]} rotation={[0, 0, -0.55]} castShadow><meshStandardMaterial color="#a96f4d" /></RoundedBox></group>;
   }
 }
 
