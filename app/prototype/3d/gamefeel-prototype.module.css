@@ -1,0 +1,189 @@
+.prototypeRoot { width: 100vw; height: 100vh; overflow: hidden; color: #263a34; background: #e9eee8; }
+.prototypeRoot button { font: inherit; }
+.variantShell { width: 100%; height: 100%; position: relative; overflow: hidden; }
+.brandMark { display: inline-flex; align-items: center; gap: 10px; }
+.brandMark > i { width: 38px; height: 38px; display: grid; place-items: center; border: 3px solid #35584e; border-radius: 11px 11px 6px 6px; color: #35584e; background: #f5c96d; transform: rotate(-2deg); }
+.brandMark > i svg { width: 20px; }
+.brandMark > span { display: grid; line-height: 1; }
+.brandMark strong { font-size: 17px; letter-spacing: .08em; }
+.brandMark small { margin-top: 5px; color: #d7795e; font-size: 7px; font-weight: 900; letter-spacing: .18em; }
+.prototypeTag, .prototypeTagFloating { width: max-content; display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid #ffffff9c; border-radius: 99px; color: #536d64; background: #ffffffb8; font-size: 10px; font-weight: 850; backdrop-filter: blur(10px); }
+.prototypeTag svg, .prototypeTagFloating svg { width: 14px; }
+.prototypeSwitcher { min-width: 390px; height: 66px; position: fixed; left: 50%; bottom: 16px; z-index: 100; transform: translateX(-50%); display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; border: 2px solid #ffffff33; border-radius: 22px; color: #fff; background: #182a25ed; box-shadow: 0 20px 50px #172b2566; backdrop-filter: blur(16px); }
+.prototypeSwitcher button { width: 40px; height: 40px; margin: auto; border: 0; border-radius: 13px; color: #fff; background: #ffffff13; cursor: pointer; display: grid; place-items: center; }
+.prototypeSwitcher span { display: grid; text-align: center; }
+.prototypeSwitcher small { color: #f2b674; font-size: 7px; letter-spacing: .16em; }
+.prototypeSwitcher strong { margin-top: 3px; font-size: 12px; }
+.prototypeSwitcher em { margin-top: 2px; color: #b9ccc5; font-size: 8px; font-style: normal; }
+
+/* A — Cozy dollhouse */
+.cozyShell { padding-top: 70px; background: linear-gradient(155deg,#d7efe6,#f3e1b6); }
+.cozyHeader { height: 70px; padding: 0 24px; position: absolute; inset: 0 0 auto; z-index: 10; display: flex; align-items: center; gap: 22px; border-bottom: 1px solid #ffffff75; background: #fff9; backdrop-filter: blur(18px); }
+.cozyHeaderActions { margin-left: auto; display: flex; gap: 8px; }
+.cozyHeaderActions button { height: 40px; padding: 0 14px; border: 1px solid #d7dfd8; border-radius: 13px; display: flex; align-items: center; gap: 7px; color: #435b53; background: #fff; font-size: 10px; font-weight: 850; }
+.cozyHeaderActions svg { width: 16px; }
+.cozyHeaderActions .sunButton { color: #805f24; background: #fff1be; border-color: #eed884; }
+.cozyCanvas { height: calc(100% - 136px); position: relative; margin: 0 22px; overflow: hidden; border: 5px solid #fff8; border-radius: 34px; background: #bcded2; box-shadow: 0 32px 90px #5370672d; }
+.cozyCanvas canvas { touch-action: none; }
+.roomBadge { position: absolute; left: 18px; top: 18px; padding: 10px 13px; border-radius: 13px; background: #fffde9d9; display: grid; box-shadow: 0 10px 30px #344e451d; backdrop-filter: blur(8px); }
+.roomBadge span { color: #8b795c; font-size: 8px; font-weight: 800; }
+.roomBadge strong { margin-top: 2px; font-size: 12px; }
+.happyBadge { position: absolute; right: 18px; top: 18px; padding: 9px 13px; border-radius: 14px; display: flex; align-items: center; gap: 8px; background: #31594de8; color: #fff; box-shadow: 0 10px 30px #244c4033; }
+.happyBadge > span { font-size: 19px; }
+.happyBadge div { display: grid; }
+.happyBadge small { color: #bfe0d4; font-size: 7px; }
+.happyBadge strong { font-size: 11px; }
+.selectedBubble { min-width: 260px; position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); padding: 10px 14px; border: 2px solid #fff; border-radius: 18px; display: grid; grid-template-columns: 42px 1fr auto; align-items: center; gap: 9px; background: #fffdf4e8; box-shadow: 0 15px 38px #344d4535; backdrop-filter: blur(10px); }
+.selectedBubble > span { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 12px; background: #f2dfbd; font-size: 22px; }
+.selectedBubble div { display: grid; }
+.selectedBubble small { color: #c47759; font-size: 7px; font-weight: 900; }
+.selectedBubble strong { font-size: 11px; }
+.selectedBubble b { color: #315b4f; font-size: 12px; }
+.cozyInventory { height: 120px; position: absolute; left: 24px; right: 24px; bottom: 0; z-index: 8; padding: 13px 14px 16px; border: 1px solid #fff; border-radius: 24px 24px 0 0; display: grid; grid-template-columns: 120px 1fr 84px; align-items: center; gap: 14px; background: #fff9; box-shadow: 0 -15px 45px #4c655c18; backdrop-filter: blur(20px); }
+.cozyInventory > div:first-child { display: grid; }
+.cozyInventory > div:first-child strong { font-size: 13px; }
+.cozyInventory > div:first-child small { margin-top: 4px; color: #7c8b85; font-size: 8px; line-height: 1.4; }
+.inventoryItems { min-width: 0; display: grid; grid-template-columns: repeat(6,1fr); gap: 7px; }
+.inventoryItems button { min-width: 0; height: 75px; padding: 6px; border: 2px solid transparent; border-radius: 16px; display: grid; place-items: center; background: #f5f1e7; cursor: pointer; }
+.inventoryItems button span { font-size: 25px; }
+.inventoryItems button small { width: 100%; overflow: hidden; color: #61736c; font-size: 7px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.inventoryItems .activeInventory { border-color: #eb8c69; background: #fff3d2; transform: translateY(-5px); box-shadow: 0 9px 20px #ad745630; }
+.roundAction { width: 72px; height: 72px; border: 0; border-radius: 50%; color: #fff; background: #e67f5e; display: grid; place-items: center; align-content: center; cursor: pointer; box-shadow: 0 10px 22px #a85e4740; }
+.roundAction svg { width: 20px; }
+.roundAction span { margin-top: 2px; font-size: 7px; font-weight: 900; }
+.cozyHint { position: absolute; left: 40px; bottom: 130px; z-index: 9; display: flex; align-items: center; gap: 6px; color: #fff; font-size: 8px; font-weight: 800; text-shadow: 0 2px 8px #29493f; }
+.cozyHint svg { width: 15px; }
+
+/* B — Precise planner */
+.plannerShell { background: #e7ece8; }
+.plannerHeader { height: 66px; padding: 0 16px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid #d8dfda; background: #fff; }
+.plannerModes { display: flex; gap: 4px; padding: 4px; border-radius: 13px; background: #eef1ee; }
+.plannerModes button { padding: 8px 12px; border: 0; border-radius: 10px; display: flex; align-items: center; gap: 7px; color: #65766f; background: transparent; font-size: 9px; font-weight: 850; }
+.plannerModes svg { width: 15px; }
+.plannerModes .plannerModeActive { color: #fff; background: #365f52; }
+.budgetPill { margin-left: auto; padding: 5px 11px; display: grid; grid-template-columns: auto auto; column-gap: 8px; align-items: center; border-right: 1px solid #dde2de; }
+.budgetPill small { grid-column: span 2; color: #85908c; font-size: 7px; }
+.budgetPill strong { font-size: 12px; }
+.budgetPill i { color: #4e9277; font-size: 8px; font-style: normal; font-weight: 850; }
+.plannerCta { height: 40px; padding: 0 15px; border: 0; border-radius: 12px; color: #fff; background: #d9785c; display: flex; align-items: center; gap: 7px; font-size: 9px; font-weight: 900; }
+.plannerCta svg { width: 15px; }
+.plannerBody { height: calc(100% - 66px); display: grid; grid-template-columns: 225px 1fr 220px; }
+.plannerCatalog, .plannerInspector { min-width: 0; padding: 18px 14px; background: #fff; overflow: hidden; }
+.plannerCatalog { border-right: 1px solid #dbe0dc; }
+.plannerCatalog h1 { margin: 13px 0 10px; font-size: 19px; }
+.plannerTabs { display: flex; gap: 4px; margin-bottom: 12px; }
+.plannerTabs button { padding: 6px 8px; border: 0; border-radius: 8px; color: #718079; background: #f0f3f0; font-size: 7px; font-weight: 850; }
+.plannerTabs .tabActive { color: #fff; background: #486d61; }
+.plannerItemList { display: grid; gap: 7px; }
+.plannerItemList button { min-width: 0; height: 62px; padding: 7px; border: 1px solid #e0e4e1; border-radius: 12px; display: grid; grid-template-columns: 45px 1fr 20px; align-items: center; gap: 7px; background: #fff; text-align: left; cursor: pointer; }
+.plannerItemList button > span { width: 45px; height: 45px; display: grid; place-items: center; border-radius: 9px; background: #f3efe5; font-size: 21px; }
+.plannerItemList button div { min-width: 0; display: grid; }
+.plannerItemList strong { overflow: hidden; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.plannerItemList small { margin-top: 3px; color: #b16d53; font-size: 8px; font-weight: 800; }
+.plannerItemList svg { width: 15px; color: #6a8279; }
+.plannerItemList .plannerItemActive { border-color: #dd805f; background: #fff8eb; box-shadow: 0 7px 18px #5e493b12; }
+.plannerCanvas { min-width: 0; position: relative; background: #edf0eb; }
+.plannerCanvas canvas { touch-action: none; }
+.gridLegend { position: absolute; left: 12px; bottom: 84px; padding: 8px 10px; border: 1px solid #dce2dd; border-radius: 10px; display: flex; align-items: center; gap: 10px; background: #fffddc; box-shadow: 0 7px 18px #40554b16; font-size: 7px; font-weight: 800; }
+.gridLegend span { display: flex; align-items: center; gap: 4px; }
+.gridLegend i { width: 7px; height: 7px; border-radius: 2px; }
+.gridValid { background: #68a786; }
+.gridWarning { background: #e89162; }
+.gridLegend small { color: #8a958f; }
+.planRoomLabel { position: absolute; padding: 7px 9px; border-radius: 8px; display: grid; text-align: center; color: #586d65; background: #ffffffa8; pointer-events: none; }
+.planRoomLabel strong { font-size: 8px; }
+.planRoomLabel small { font-size: 7px; }
+.plannerInspector { position: relative; border-left: 1px solid #dbe0dc; }
+.closeInspector { position: absolute; right: 12px; top: 12px; border: 0; color: #82908b; background: transparent; }
+.closeInspector svg { width: 17px; }
+.inspectorEmoji { width: 100%; height: 130px; margin-top: 15px; display: grid; place-items: center; border-radius: 18px; background: linear-gradient(145deg,#f6ead6,#e8eee7); font-size: 64px; }
+.plannerInspector > small { display: block; margin-top: 13px; color: #d17456; font-size: 7px; font-weight: 900; }
+.plannerInspector h2 { margin: 6px 0 3px; font-size: 17px; }
+.inspectorPrice { font-size: 15px; }
+.inspectorRule { height: 1px; margin: 14px 0; background: #e3e7e3; }
+.plannerInspector label { display: flex; justify-content: space-between; color: #718078; font-size: 8px; font-weight: 750; }
+.plannerInspector label b { color: #354d45; }
+.rotateWide { width: 100%; height: 38px; margin-top: 8px; border: 1px solid #ccd6d0; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 7px; color: #3b5d52; background: #f8faf8; font-size: 8px; font-weight: 900; }
+.rotateWide svg { width: 15px; }
+.measurement { margin-top: 10px; display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; }
+.measurement span { padding: 7px 3px; border-radius: 7px; color: #6c7d76; background: #f0f3f0; text-align: center; font-size: 7px; font-weight: 800; }
+.trafficAdvice { margin-top: 15px; padding: 10px; border: 1px solid #cde0d4; border-radius: 11px; color: #3f6d5d; background: #eef9f2; display: flex; gap: 7px; }
+.trafficAdvice svg { width: 16px; }
+.trafficAdvice span { display: grid; }
+.trafficAdvice strong { font-size: 8px; }
+.trafficAdvice small { margin-top: 2px; color: #6d877d; font-size: 7px; }
+
+/* C — Third-person exploration */
+.exploreShell { background: #99cfc5; }
+.exploreCanvas { position: absolute; inset: 0; }
+.exploreCanvas canvas { touch-action: none; }
+.exploreHud { height: 78px; padding: 0 22px; position: absolute; inset: 0 0 auto; z-index: 5; display: flex; align-items: center; color: #fff; background: linear-gradient(#1e453b99,transparent); text-shadow: 0 2px 10px #28483f; }
+.exploreHud .brandMark > i { color: #294e43; border-color: #fff; background: #f4ca66; }
+.exploreHud .brandMark strong { color: #fff; }
+.exploreLocation { margin-left: 25px; padding-left: 18px; border-left: 1px solid #ffffff55; display: grid; grid-template-columns: 20px 1fr; }
+.exploreLocation svg { width: 16px; grid-row: span 2; }
+.exploreLocation small { color: #d2ebe3; font-size: 7px; }
+.exploreLocation strong { font-size: 11px; }
+.exploreHud > div { margin-left: auto; display: flex; gap: 7px; }
+.exploreHud button { width: 40px; height: 40px; border: 1px solid #ffffff77; border-radius: 50%; color: #fff; background: #244c42a6; display: grid; place-items: center; backdrop-filter: blur(8px); }
+.exploreHud button svg { width: 17px; }
+.questCard { position: absolute; left: 20px; top: 96px; z-index: 4; padding: 11px 13px; border: 2px solid #fff; border-radius: 18px; display: grid; grid-template-columns: 38px 1fr auto; align-items: center; gap: 9px; color: #39594f; background: #fff9; box-shadow: 0 12px 30px #294a4130; backdrop-filter: blur(14px); }
+.questCard > span { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 13px; background: #fff0b7; font-size: 19px; }
+.questCard div { display: grid; }
+.questCard small { color: #b17649; font-size: 7px; font-weight: 900; }
+.questCard strong { max-width: 190px; font-size: 9px; }
+.questCard b { padding: 5px 7px; border-radius: 8px; color: #fff; background: #6b9b88; font-size: 8px; }
+.proximityCard { min-width: 410px; position: absolute; left: 50%; bottom: 112px; z-index: 5; transform: translateX(-50%); padding: 10px 12px; border: 2px solid #fff; border-radius: 20px; display: grid; grid-template-columns: 48px 1fr auto; align-items: center; gap: 9px; color: #344f46; background: #fffbe9e8; box-shadow: 0 15px 38px #233e3642; backdrop-filter: blur(12px); }
+.proximityCard > span { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 15px; background: #f1dfbd; font-size: 25px; }
+.proximityCard div { display: grid; }
+.proximityCard small { color: #b36d52; font-size: 7px; font-weight: 900; }
+.proximityCard strong { font-size: 11px; }
+.proximityCard b { margin-top: 2px; color: #4f7769; font-size: 9px; }
+.proximityCard button { height: 36px; padding: 0 11px; border: 0; border-radius: 11px; color: #fff; background: #d87b5d; display: flex; align-items: center; gap: 6px; font-size: 8px; font-weight: 900; }
+.proximityCard button svg { width: 14px; }
+.exploreControls { position: absolute; left: 20px; right: 20px; bottom: 20px; z-index: 4; display: flex; align-items: end; justify-content: space-between; color: #fff; }
+.joystick { width: 82px; height: 82px; position: relative; border: 2px solid #ffffff9b; border-radius: 50%; background: #21483fa6; box-shadow: inset 0 0 0 10px #ffffff12; backdrop-filter: blur(8px); }
+.joystick i { width: 34px; height: 34px; position: absolute; left: 24px; top: 18px; border-radius: 50%; background: #f5ca6b; box-shadow: 0 7px 12px #203f3860; }
+.joystick span { position: absolute; left: 24px; bottom: 8px; font-size: 7px; font-weight: 900; }
+.exploreControls > span { padding: 8px 12px; border-radius: 99px; display: flex; align-items: center; gap: 7px; background: #244c42a8; font-size: 8px; font-weight: 850; backdrop-filter: blur(8px); }
+.exploreControls > span svg { width: 14px; }
+.exploreControls > button { width: 76px; height: 76px; border: 2px solid #fff; border-radius: 50%; color: #704d2f; background: #f7d376; display: grid; place-items: center; align-content: center; font-size: 7px; font-weight: 900; box-shadow: 0 12px 30px #2e4f4640; }
+.exploreControls > button svg { width: 20px; }
+.prototypeTagFloating { position: absolute; right: 22px; top: 94px; z-index: 4; color: #fff; background: #234d42b0; }
+
+@media (max-width: 900px) {
+  .prototypeSwitcher { min-width: 340px; bottom: 10px; }
+  .cozyHeader .prototypeTag { display: none; }
+  .cozyCanvas { margin: 0 12px; }
+  .cozyInventory { left: 12px; right: 12px; grid-template-columns: 1fr 72px; }
+  .cozyInventory > div:first-child { display: none; }
+  .inventoryItems { grid-template-columns: repeat(6,1fr); }
+  .plannerBody { grid-template-columns: 175px 1fr; }
+  .plannerInspector { display: none; }
+  .plannerModes { display: none; }
+  .proximityCard { min-width: min(410px,calc(100% - 30px)); }
+}
+
+@media (max-width: 620px) {
+  .prototypeSwitcher { min-width: calc(100% - 24px); }
+  .cozyHeader { padding: 0 12px; }
+  .cozyHeaderActions button:first-child { display: none; }
+  .cozyCanvas { height: calc(100% - 118px); }
+  .cozyInventory { height: 105px; padding-bottom: 10px; }
+  .inventoryItems button small { display: none; }
+  .inventoryItems button { height: 60px; }
+  .roundAction { width: 60px; height: 60px; }
+  .selectedBubble { min-width: calc(100% - 24px); bottom: 112px; }
+  .cozyHint { display: none; }
+  .plannerBody { grid-template-columns: 1fr; }
+  .plannerCatalog { display: none; }
+  .budgetPill { display: none; }
+  .plannerHeader { gap: 8px; }
+  .plannerCta { margin-left: auto; }
+  .questCard { right: 12px; left: 12px; }
+  .prototypeTagFloating { display: none; }
+  .proximityCard { bottom: 122px; grid-template-columns: 44px 1fr; }
+  .proximityCard button { display: none; }
+  .exploreLocation { display: none; }
+}
+
