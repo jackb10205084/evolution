@@ -34,6 +34,7 @@ npm test
 畫面已用可替換 Adapter 呈現 Google／Apple／LINE、綠界、CRM Webhook、聯盟歸因與寫實渲染工作。此倉庫不內含正式業者憑證，也不會把測試互動包裝成真實外部交易。
 
 - `SceneModule`：`app/components/experience-canvas.tsx`、`app/lib/domain.ts`
+- `EditorEngine Module`：`app/lib/editor-engine.ts`，集中處理旋轉後碰撞、門口淨空、地毯疊放、復原／重做與動線警告
 - `CatalogModule`：`app/lib/catalog.ts` 與 manifest API
 - `ProjectPublishingModule`：建案、戶型、主題與 D1 schema
 - `BookingModule`：`/api/bookings`、同意紀錄、Webhook outbox、冪等報到與 append-only ledger
@@ -42,6 +43,8 @@ npm test
 - `AffiliateModule`、`CommerceModule`：資料模型與 Alpha 介面已就位，正式連線由 Adapter 加入
 
 `tests/durable-workflows.test.mjs` 以 Miniflare 與真實 D1 migration 驗證配置重載、預約重送、重複報到、點數耗盡、失敗退點、分享重送與撤銷。
+
+`public/assets/commercial-pilot/manifest.json` 是 A6 商業垂直切片的發布來源。`npm run pilot:audit` 顯示真實門檻進度；`npm run pilot:release` 在戶型、商品、付款或渲染仍是替身資料時會阻擋發布。
 
 ## 正式串接前置條件
 

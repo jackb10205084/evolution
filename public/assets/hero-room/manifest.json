@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "visualContractVersion": "v2-original-cozy",
+  "style": "high-key-pastel-dollhouse",
+  "units": "meter",
+  "upAxis": "Y",
+  "generatedBy": "HomePlay deterministic GLB builder",
+  "assets": [
+    "sofa-soft.glb",
+    "chair-breeze.glb",
+    "table-pebble.glb",
+    "rug-meadow.glb",
+    "lamp-moon.glb",
+    "plant-olive.glb",
+    "shelf-cabin.glb",
+    "bed-soft.glb",
+    "ikea-saltsjobaden.glb",
+    "ikea-borgeby.glb",
+    "ikea-ekenaset.glb",
+    "ikea-stoense.glb",
+    "ikea-lauters.glb",
+    "ikea-fejka-fig.glb",
+    "ikea-kallax.glb",
+    "mascot-resident.glb"
+  ]
+}

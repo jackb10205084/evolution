@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "1.0",
+  "pilotId": "bh7-a6-commercial-vertical-slice",
+  "releaseStatus": "blocked",
+  "floorplan": {
+    "id": "bh7-a6",
+    "currentStatus": "drawing-audit-runtime-shell",
+    "requiredStatus": "cad-verified-glb",
+    "sourcePages": [2, 3, 7],
+    "webAsset": null,
+    "renderAsset": null
+  },
+  "artDirection": {
+    "version": "v2-original-cozy",
+    "master": "/key-art/v2/09-a6-original-ultra-kawaii-mascot.png",
+    "status": "approved"
+  },
+  "requiredOwnedSkuCount": 8,
+  "candidateOwnedSkus": [
+    { "sku": "PG-SF-001", "role": "sofa", "sourceStatus": "awaiting-manufacturer-pack", "webAssetStatus": "prototype-only" },
+    { "sku": "PG-TB-014", "role": "coffee-table", "sourceStatus": "awaiting-manufacturer-pack", "webAssetStatus": "prototype-only" },
+    { "sku": "PG-CH-008", "role": "lounge-chair", "sourceStatus": "awaiting-manufacturer-pack", "webAssetStatus": "prototype-only" },
+    { "sku": "PG-RG-021", "role": "rug", "sourceStatus": "awaiting-manufacturer-pack", "webAssetStatus": "prototype-only" },
+    { "sku": "PG-ST-012", "role": "storage", "sourceStatus": "awaiting-manufacturer-pack", "webAssetStatus": "prototype-only" },
+    { "sku": "PG-BD-004", "role": "bedroom-future-slice", "sourceStatus": "awaiting-manufacturer-pack", "webAssetStatus": "prototype-only" }
+  ],
+  "releaseGates": [
+    { "id": "art-direction", "label": "美術母版", "status": "ready", "note": "V2 原創暖萌方向已凍結" },
+    { "id": "editor-engine", "label": "編輯器核心", "status": "ready", "note": "統一處理旋轉碰撞、門口淨空與歷史紀錄" },
+    { "id": "floorplan-cad", "label": "A6 正式戶型", "status": "blocked", "note": "PDF 已稽核；等待 CAD／Blender 尺寸回歸" },
+    { "id": "owned-sku-assets", "label": "自有家具資產", "status": "blocked", "note": "等待 8 件真實 SKU 六視圖、材質與尺寸包" },
+    { "id": "commerce", "label": "訂單與付款", "status": "blocked", "note": "等待綠界測試商店與發票資料" },
+    { "id": "render-worker", "label": "寫實渲染", "status": "blocked", "note": "等待 Blender Worker 與作品儲存" }
+  ]
+}

@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import {
   ArrowLeft,
   ArrowRight,
-  BadgePercent,
   Box,
   Building2,
   CalendarDays,
@@ -48,7 +47,7 @@ import {
   WandSparkles,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import {
   ApiClientError,
@@ -62,7 +61,8 @@ import {
   saveDesign as saveDesignApi,
 } from "./lib/api-client";
 import type { BookingSession, RenderJobRecord } from "./lib/api-client";
-import { catalog, floorplans, initialFurnitureIds, themes } from "./lib/catalog";
+import { catalog, floorplans, ikeaDemoFurnitureIds, themeFurnitureIds, themes } from "./lib/catalog";
+import { commercialPilot, commercialPilotProgress } from "./lib/commercial-pilot";
 import type {
   BookingDraft,
   EditorMode,
@@ -70,7 +70,10 @@ import type {
   SceneObjectV1,
 } from "./lib/domain";
 import { formatCurrency } from "./lib/domain";
+import { createEditorEngine, quaternionFromY, type EditorCommand, type EditorFloorplan, type EditorView } from "./lib/editor-engine";
 import { proposalProject } from "./lib/project";
+import { getFloorplanRuntime } from "./lib/floorplan-runtime";
+import { HOMEPLAY_VISUAL_VERSION, homePlayVisual } from "./lib/visual-contract";
 
 const ExperienceCanvas = dynamic(
   () => import("./components/experience-canvas").then((module) => module.ExperienceCanvas),
@@ -83,16 +86,6 @@ type AdminView = "builder" | "platform";
 type ActionState = null | "booking" | "check-in" | "render" | "share" | "revoke-share";
 type ShareSession = { id: string; url: string; expiresAt: string };
 
-const initialPositions: Record<string, [number, number]> = {
-  "rug-meadow": [0.1, 0.1],
-  "sofa-cloud": [-0.2, 1.25],
-  "table-pebble": [0.15, -0.05],
-  "chair-breeze": [2.05, 0.4],
-  "lamp-moon": [-2.15, 1.65],
-  "plant-olive": [3.95, -2.45],
-  "shelf-cabin": [-3.8, -2.9],
-};
-
 const categoryLabels = {
   all: "全部",
   living: "客廳",
@@ -101,6 +94,19 @@ const categoryLabels = {
   decor: "飾品",
 } as const;
 
+const editorFloorplans = ["bh7-a6", "bh7-a11"].map((floorplanId): EditorFloorplan => {
+  const runtime = getFloorplanRuntime(floorplanId);
+  if (!runtime) throw new Error(`Missing editor floorplan ${floorplanId}`);
+  return {
+    id: runtime.floorplanId,
+    footprint: runtime.shell.footprint,
+    editableBounds: runtime.shell.editableBounds,
+    walls: runtime.shell.walls,
+    openings: runtime.shell.openings,
+    candidateSpots: runtime.candidateSpots,
+  };
+});
+
 export function HomePlayApp() {
   const [stage, setStage] = useState<Stage>("landing");
   const [modal, setModal] = useState<Modal>(null);
@@ -108,15 +114,25 @@ export function HomePlayApp() {
   const [selectedAvatar, setSelectedAvatar] = useState(1);
   const [selectedFloorplan, setSelectedFloorplan] = useState(floorplans[0].id);
   const [selectedTheme, setSelectedTheme] = useState(themes[0].id);
+  const editorEngine = useMemo(() => {
+    const engine = createEditorEngine({ products: catalog, floorplans: editorFloorplans });
+    const initialItems = buildInitialScene(floorplans[0].id, "sunny");
+    engine.load({ floorplanId: floorplans[0].id, items: initialItems, selectedId: "scene-sofa-cloud" });
+    return engine;
+  }, []);
+  const initialEditorView = editorEngine.view();
   const [mode, setMode] = useState<EditorMode>("decorate");
-  const [items, setItems] = useState<SceneObjectV1[]>(() => buildInitialScene("sunny"));
-  const [selectedItemId, setSelectedItemId] = useState<string | null>("scene-sofa-cloud");
+  const [touchMove, setTouchMove] = useState({ x: 0, z: 0 });
+  const [cameraResetNonce, setCameraResetNonce] = useState(0);
+  const [auditMode, setAuditMode] = useState(false);
+  const [items, setItems] = useState<SceneObjectV1[]>(initialEditorView.items);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(initialEditorView.selectedId);
   const [category, setCategory] = useState<keyof typeof categoryLabels>("all");
   const [search, setSearch] = useState("");
   const [budget, setBudget] = useState(180000);
   const [budgetEnabled, setBudgetEnabled] = useState(true);
-  const [undoStack, setUndoStack] = useState<SceneObjectV1[][]>([]);
-  const [redoStack, setRedoStack] = useState<SceneObjectV1[][]>([]);
+  const [canUndo, setCanUndo] = useState(initialEditorView.canUndo);
+  const [canRedo, setCanRedo] = useState(initialEditorView.canRedo);
   const [saveState, setSaveState] = useState<"saved" | "saving" | "error">("saved");
   const [toast, setToast] = useState("");
   const [renderCredits, setRenderCredits] = useState(0);
@@ -128,7 +144,6 @@ export function HomePlayApp() {
   const [actionState, setActionState] = useState<ActionState>(null);
   const [adminView, setAdminView] = useState<AdminView>("builder");
   const [cartOpenIds, setCartOpenIds] = useState<string[]>([]);
-  const dragStart = useRef<SceneObjectV1[] | null>(null);
 
   const selectedProduct = useMemo(() => {
     const sceneItem = items.find((item) => item.id === selectedItemId);
@@ -144,15 +159,31 @@ export function HomePlayApp() {
   const ownedTotal = sceneProducts.filter((product) => product.brandKind === "owned").reduce((sum, product) => sum + product.price, 0);
 
   const filteredCatalog = useMemo(
-    () => catalog.filter((product) => {
-      const matchesCategory = category === "all" || product.category === category;
-      const matchesSearch = product.name.includes(search) || product.brand.toLowerCase().includes(search.toLowerCase());
-      return matchesCategory && matchesSearch;
-    }),
+    () => catalog
+      .filter((product) => {
+        const matchesCategory = category === "all" || product.category === category;
+        const matchesSearch = product.name.includes(search) || product.brand.toLowerCase().includes(search.toLowerCase());
+        return matchesCategory && matchesSearch;
+      })
+      .toSorted((a, b) => Number(b.partnershipStatus === "demo") - Number(a.partnershipStatus === "demo")),
     [category, search],
   );
 
   const showToast = useCallback((message: string) => setToast(message), []);
+
+  const syncEditorView = useCallback((view: EditorView) => {
+    setItems(view.items);
+    setSelectedItemId(view.selectedId);
+    setCanUndo(view.canUndo);
+    setCanRedo(view.canRedo);
+  }, []);
+
+  const runEditorCommand = useCallback((command: EditorCommand, announce = true) => {
+    const result = editorEngine.dispatch(command);
+    syncEditorView(result.view);
+    if (announce && result.effect) showToast(result.effect.message);
+    return result;
+  }, [editorEngine, showToast, syncEditorView]);
 
   const refreshRenderState = useCallback(async () => {
     const state = await loadRenderState();
@@ -188,23 +219,28 @@ export function HomePlayApp() {
   }, [designReady, items, selectedFloorplan, selectedTheme, showToast, stage]);
 
   const enterExperience = async () => {
-    setItems(buildInitialScene(selectedTheme));
-    setUndoStack([]);
-    setRedoStack([]);
-    setSelectedItemId(selectedTheme === "empty" ? null : "scene-sofa-cloud");
+    const initialScene = buildInitialScene(selectedFloorplan, selectedTheme);
+    syncEditorView(editorEngine.load({
+      floorplanId: selectedFloorplan,
+      items: initialScene,
+      selectedId: initialScene.find((item) => item.sku === "PG-SF-001")?.id ?? initialScene[0]?.id ?? null,
+    }));
     setDesignReady(false);
+    setAuditMode(false);
     setStage("editor");
     window.scrollTo({ top: 0, behavior: "smooth" });
     try {
       const [savedDesigns, renderState] = await Promise.all([loadDesigns(), loadRenderState()]);
-      const saved = savedDesigns.find((entry) => entry.floorplanId === selectedFloorplan);
+      const saved = savedDesigns.find((entry) => entry.floorplanId === selectedFloorplan && entry.themeId === selectedTheme);
       setRenderCredits(renderState.balance);
       setRenderJobs(renderState.jobs);
-      if (saved?.snapshot.objects?.length) {
-        setItems(saved.snapshot.objects);
-        setSelectedTheme(saved.themeId);
+      if (saved) {
+        const savedObjects = saved.snapshot.objects ?? [];
         setDesignId(saved.id);
-        setSelectedItemId(saved.snapshot.objects[0]?.id ?? null);
+        const preferredSelection = savedObjects.find((object) => object.sku === "PG-SF-001")
+          ?? savedObjects.find((object) => object.sku === "IKEA-195.999.18")
+          ?? savedObjects[0];
+        syncEditorView(editorEngine.load({ floorplanId: selectedFloorplan, items: savedObjects, selectedId: preferredSelection?.id ?? null }));
         showToast("已載入上次自動儲存的配置");
       }
     } catch (error) {
@@ -214,91 +250,43 @@ export function HomePlayApp() {
     }
   };
 
-  const commit = (next: SceneObjectV1[]) => {
-    setUndoStack((stack) => [...stack.slice(-39), cloneItems(items)]);
-    setRedoStack([]);
-    setItems(next);
+  const applyIkeaDemoSet = () => {
+    const activeTheme = selectedTheme === "empty" ? "sunny" : selectedTheme;
+    const next = buildSceneFromIds(selectedFloorplan, activeTheme, ikeaDemoFurnitureIds);
+    runEditorCommand({ type: "replace", items: next, selectedId: "scene-ikea-saltsjobaden", recordHistory: true }, false);
+    showToast(`已套用 ${floorplans.find((plan) => plan.id === selectedFloorplan)?.name ?? "此戶型"} IKEA 模擬組`);
   };
 
   const handleMove = (id: string, x: number, z: number) => {
-    if (!dragStart.current) dragStart.current = cloneItems(items);
-    const current = items.find((item) => item.id === id);
-    if (!current) return;
-    const product = catalog.find((entry) => entry.sku === current.sku);
-    if (!product) return;
-    const clampedX = clamp(x, -4.75 + product.size.width / 2, 4.75 - product.size.width / 2);
-    const clampedZ = clamp(z, -3.1 + product.size.depth / 2, 3.1 - product.size.depth / 2);
-    if (collides(id, clampedX, clampedZ, product, items)) {
-      showToast("這裡會與其他家具重疊");
-      return;
-    }
-    setItems((currentItems) => currentItems.map((item) => item.id === id ? { ...item, position: { ...item.position, x: clampedX, z: clampedZ } } : item));
+    runEditorCommand({ type: "move.update", id, x, z });
   };
 
-  const handleDragEnd = () => {
-    if (dragStart.current) {
-      setUndoStack((stack) => [...stack.slice(-39), dragStart.current!]);
-      setRedoStack([]);
-      dragStart.current = null;
-    }
-    const selected = items.find((item) => item.id === selectedItemId);
-    if (selected && selected.position.x > 3.2 && selected.position.z > 1.45) {
-      showToast("這個位置可能影響主要動線，但你仍可保留");
-    }
+  const handleDragEnd = (id: string) => {
+    runEditorCommand({ type: "move.end", id });
   };
 
   const rotateSelected = () => {
     if (!selectedItemId) return;
-    commit(items.map((item) => item.id === selectedItemId ? { ...item, rotation: quaternionFromY(quaternionToY(item.rotation) + Math.PI / 4) } : item));
+    runEditorCommand({ type: "rotate", id: selectedItemId });
   };
 
   const cycleMaterial = () => {
     if (!selectedItemId) return;
-    commit(items.map((item) => item.id === selectedItemId ? { ...item, materialVariant: item.materialVariant + 1 } : item));
+    runEditorCommand({ type: "material.next", id: selectedItemId });
   };
 
   const removeSelected = () => {
     if (!selectedItemId) return;
-    commit(items.filter((item) => item.id !== selectedItemId));
-    setSelectedItemId(null);
-    showToast("已從房間移除");
+    runEditorCommand({ type: "remove", id: selectedItemId });
   };
 
   const addFurniture = (product: FurnitureItem) => {
-    if (product.stock === "out_of_stock") return;
-    const spot = findOpenSpot(product, items);
-    if (!spot) {
-      showToast("房間沒有足夠空間，請先移動其他家具");
-      return;
-    }
-    const item: SceneObjectV1 = {
-      id: `scene-${product.id}-${crypto.randomUUID()}`,
-      sku: product.sku,
-      assetVersion: product.assetVersion,
-      position: { x: spot[0], y: 0, z: spot[1] },
-      rotation: quaternionFromY(0),
-      materialVariant: 0,
-    };
-    commit([...items, item]);
-    setSelectedItemId(item.id);
-    showToast(`${product.name} 已放入房間`);
+    runEditorCommand({ type: "add", productId: product.id });
   };
 
-  const undo = () => {
-    const previous = undoStack.at(-1);
-    if (!previous) return;
-    setRedoStack((stack) => [...stack, cloneItems(items)]);
-    setItems(previous);
-    setUndoStack((stack) => stack.slice(0, -1));
-  };
+  const undo = () => runEditorCommand({ type: "undo" }, false);
 
-  const redo = () => {
-    const next = redoStack.at(-1);
-    if (!next) return;
-    setUndoStack((stack) => [...stack, cloneItems(items)]);
-    setItems(next);
-    setRedoStack((stack) => stack.slice(0, -1));
-  };
+  const redo = () => runEditorCommand({ type: "redo" }, false);
 
   const addOwnedSceneToCart = () => {
     setCartOpenIds(sceneProducts.filter((product) => product.brandKind === "owned").map((product) => product.id));
@@ -322,7 +310,11 @@ export function HomePlayApp() {
       const currentDesignId = designId ?? await persistDesignNow();
       await createRender({
         designId: currentDesignId,
-        camera: { position: { x: 8.8, y: 8.4, z: 10.2 }, target: { x: 0, y: 0.8, z: 0 }, fov: 38 },
+        camera: {
+          position: { x: homePlayVisual.scene.cameraPosition[0], y: homePlayVisual.scene.cameraPosition[1], z: homePlayVisual.scene.cameraPosition[2] },
+          target: { x: homePlayVisual.scene.cameraTarget[0], y: homePlayVisual.scene.cameraTarget[1], z: homePlayVisual.scene.cameraTarget[2] },
+          fov: 38,
+        },
       }, crypto.randomUUID());
       await refreshRenderState();
       setModal(null);
@@ -445,14 +437,15 @@ export function HomePlayApp() {
   }
 
   return (
-    <main className="editor-shell">
+    <main className="editor-shell" data-visual-version={HOMEPLAY_VISUAL_VERSION}>
       <EditorHeader
         mode={mode}
-        setMode={setMode}
+        setMode={(nextMode) => { setMode(nextMode); if (nextMode === "explore") setAuditMode(false); }}
         total={total}
         budget={budget}
         saveState={saveState}
         renderCredits={renderCredits}
+        avatarIndex={selectedAvatar}
         onBack={() => setStage("setup")}
         onBooking={() => setModal("booking")}
         onShare={() => setModal("share")}
@@ -462,18 +455,31 @@ export function HomePlayApp() {
       />
 
       <div className="editor-layout">
+        <nav className="editor-category-rail" aria-label="家具分類">
+          <span className="rail-title">家具<br />目錄</span>
+          {(Object.keys(categoryLabels) as (keyof typeof categoryLabels)[]).map((key) => (
+            <button key={key} className={category === key ? "active" : ""} onClick={() => setCategory(key)} aria-label={categoryLabels[key]}>
+              <CategoryGlyph category={key} />
+              <span>{categoryLabels[key]}</span>
+            </button>
+          ))}
+        </nav>
+
         <aside className="catalog-panel">
           <div className="catalog-heading">
             <div>
-              <span className="eyebrow">完整家具庫</span>
-              <h2>放進你的家</h2>
+              <span className="eyebrow">免費完整家具庫 · 商品模擬</span>
+              <h2>把喜歡的放進家裡</h2>
             </div>
-            <button className="icon-button"><ListFilter size={18} /></button>
+            <button className="demo-library-button" onClick={applyIkeaDemoSet} title="重新套用 IKEA A6 模擬組">
+              <Sparkles size={15} />IKEA 模擬組
+            </button>
+            <label className="search-field">
+              <Search size={17} />
+              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜尋家具、品牌" />
+            </label>
+            <button className="icon-button" aria-label="篩選家具"><ListFilter size={18} /></button>
           </div>
-          <label className="search-field">
-            <Search size={17} />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜尋家具、品牌" />
-          </label>
           <div className="category-tabs">
             {(Object.keys(categoryLabels) as (keyof typeof categoryLabels)[]).map((key) => (
               <button key={key} className={category === key ? "active" : ""} onClick={() => setCategory(key)}>{categoryLabels[key]}</button>
@@ -481,14 +487,14 @@ export function HomePlayApp() {
           </div>
           <div className="catalog-list">
             {filteredCatalog.map((product) => (
-              <button className="catalog-card" key={product.id} onClick={() => addFurniture(product)}>
+              <button className="catalog-card" key={product.id} disabled={product.stock === "out_of_stock"} onClick={() => addFurniture(product)}>
                 <ProductShape product={product} />
                 <span className="catalog-card-copy">
                   <span className="brand-line">
-                    {product.brandKind === "owned" ? "自有品牌" : `聯盟回饋 ${product.cashbackRate}%`}
+                    {productPartnerLabel(product)}
                   </span>
                   <strong>{product.name}</strong>
-                  <span>{formatCurrency(product.price)}</span>
+                  <span>{formatCurrency(product.price)}{product.stock === "out_of_stock" ? " · 暫時缺貨" : ""}</span>
                 </span>
                 <Plus size={18} className="add-icon" />
               </button>
@@ -500,28 +506,37 @@ export function HomePlayApp() {
           <div className="scene-status-bar">
             <span><span className="live-dot" />{floorplans.find((floorplan) => floorplan.id === selectedFloorplan)?.name}</span>
             <span>{themes.find((theme) => theme.id === selectedTheme)?.name}</span>
+            {selectedFloorplan === commercialPilot.floorplan.id && <span className="pilot-status">Commercial Pilot · {commercialPilotProgress.ready}/{commercialPilotProgress.total} 門檻通過</span>}
+            {auditMode && <span className="audit-status">PDF 圖面疊合稽核</span>}
           </div>
           <ExperienceCanvas
+            floorplanId={selectedFloorplan}
             mode={mode}
             items={items}
             catalog={catalog}
             selectedId={selectedItemId}
-            onSelect={setSelectedItemId}
+            onSelect={(id) => runEditorCommand({ type: "select", id }, false)}
             onMove={handleMove}
             onDragEnd={handleDragEnd}
             themeId={selectedTheme}
+            touchMove={touchMove}
+            avatarVariant={selectedAvatar}
+            cameraResetNonce={cameraResetNonce}
+            auditMode={auditMode}
           />
           <div className="scene-tip">
             <MousePointer2 size={15} />
             {mode === "decorate" ? "拖曳家具移動，滾輪縮放視角" : "用 WASD 移動角色，點選家具查看"}
           </div>
           <div className="scene-tools">
-            <button onClick={undo} disabled={!undoStack.length} aria-label="復原"><Undo2 size={18} /></button>
-            <button onClick={redo} disabled={!redoStack.length} aria-label="重做"><Redo2 size={18} /></button>
+            <button onClick={undo} disabled={!canUndo} aria-label="復原"><Undo2 size={18} /></button>
+            <button onClick={redo} disabled={!canRedo} aria-label="重做"><Redo2 size={18} /></button>
             <span />
-            <button onClick={() => showToast("已將鏡頭回到最佳視角")} aria-label="重置視角"><Maximize2 size={18} /></button>
+            <button onClick={() => { setCameraResetNonce((value) => value + 1); showToast("已將鏡頭回到最佳視角"); }} aria-label="重置視角"><Maximize2 size={18} /></button>
+            <button className={auditMode ? "active" : ""} aria-pressed={auditMode} onClick={() => { setMode("decorate"); setAuditMode((value) => !value); }} aria-label="切換 PDF 圖面稽核"><Eye size={18} /></button>
           </div>
-          {mode === "explore" && <VirtualPad />}
+          {auditMode && <div className="scene-audit-note"><strong>PDF 圖面稽核層</strong><span>藍色圖線：原始平面圖 · 彩色牆體：目前 Web 3D</span><small>寬度依標註校正；深度按圖面比例暫置，待 CAD／Blender 正式重建確認。</small></div>}
+          {mode === "explore" && <VirtualPad onMove={setTouchMove} />}
         </section>
 
         <aside className="detail-panel">
@@ -529,10 +544,13 @@ export function HomePlayApp() {
             <>
               <div className="detail-product-visual"><ProductShape product={selectedProduct} large /></div>
               <div className="detail-product-copy">
-                <span className="brand-pill">{selectedProduct.brandKind === "owned" ? "Play Ground 自有品牌" : `聯盟品牌·${selectedProduct.cashbackRate}% 回饋`}</span>
+                <span className="brand-pill">{productPartnerLabel(selectedProduct)}</span>
                 <h2>{selectedProduct.name}</h2>
                 <p>{selectedProduct.size.width.toFixed(2)} × {selectedProduct.size.depth.toFixed(2)} × {selectedProduct.size.height.toFixed(2)} m</p>
                 <strong className="detail-price">{formatCurrency(selectedProduct.price)}</strong>
+                {selectedProduct.partnershipStatus === "demo" && (
+                  <small className="product-source-note">官方尺寸與參考價更新 {selectedProduct.sourceUpdatedAt}；價格、庫存以品牌官網為準。</small>
+                )}
               </div>
               <div className="material-row">
                 <span>材質配色</span>
@@ -549,11 +567,16 @@ export function HomePlayApp() {
                   setCartOpenIds((ids) => [...new Set([...ids, selectedProduct.id])]);
                   setModal("cart");
                 } else {
-                  showToast("已建立聯盟追蹤連結");
+                  if (selectedProduct.productUrl) {
+                    window.open(selectedProduct.productUrl, "_blank", "noopener,noreferrer");
+                    showToast(selectedProduct.partnershipStatus === "demo" ? "已開啟品牌官網；合作與回饋尚未啟用" : "已建立聯盟追蹤連結");
+                  } else {
+                    showToast("品牌連結尚未設定");
+                  }
                 }
               }}>
                 {selectedProduct.brandKind === "owned" ? <ShoppingBag size={18} /> : <ExternalLink size={18} />}
-                {selectedProduct.brandKind === "owned" ? "加入購物車" : "前往品牌官網"}
+                {selectedProduct.brandKind === "owned" ? "加入購物車" : selectedProduct.brand === "IKEA" ? "到 IKEA 查看商品" : "前往品牌官網"}
               </button>
             </>
           ) : (
@@ -598,7 +621,7 @@ export function HomePlayApp() {
 
 function Landing({ onStart, onAdmin, mobileNav, setMobileNav }: { onStart: () => void; onAdmin: () => void; mobileNav: boolean; setMobileNav: (value: boolean) => void }) {
   return (
-    <main className="landing">
+    <main className="landing" data-visual-version={HOMEPLAY_VISUAL_VERSION}>
       <nav className="landing-nav">
         <Brand />
         <div className={`landing-links ${mobileNav ? "open" : ""}`}>
@@ -620,7 +643,7 @@ function Landing({ onStart, onAdmin, mobileNav, setMobileNav }: { onStart: () =>
           </div>
           <div className="hero-note"><span className="avatar-stack"><i /><i /><i /></span><strong>首發提案</strong> · 機捷生活 × 自然遊園 × 家具導購</div>
         </div>
-        <DollhousePreview />
+        <HeroKeyArt />
       </section>
 
       <section className="proposal-facts" aria-label="遠雄樂元公開建案重點">
@@ -658,6 +681,21 @@ function Landing({ onStart, onAdmin, mobileNav, setMobileNav }: { onStart: () =>
 
       <footer><Brand /><p>居遊所 Play Ground · 遊戲化建案家飾導購平台</p><span>開發中版本·台灣</span></footer>
     </main>
+  );
+}
+
+function HeroKeyArt() {
+  return (
+    <div className="hero-key-art" role="img" aria-label="居遊所原創圓糯居民與 A6 粉彩模型屋正式美術示意">
+      <div className="hero-key-art-image" />
+      <div className="hero-art-caption">
+        <span>V2 ART DIRECTION</span>
+        <strong>原創圓糯療癒模型屋</strong>
+      </div>
+      <div className="floating-label one"><Home size={15} />A6 生活提案</div>
+      <div className="floating-label two"><ShoppingBag size={15} />可購買家具</div>
+      <div className="preview-toolbar" aria-hidden="true"><span className="active"><Box size={16} /></span><span><SofaGlyph /></span><span><Palette size={16} /></span><span><Camera size={16} /></span></div>
+    </div>
   );
 }
 
@@ -715,12 +753,12 @@ function AvatarScreen({ selected, setSelected, onBack, onNext }: { selected: num
         <div className="avatar-preview-large"><AvatarFigure color={outfits[selected]} index={selected} /><span className="avatar-shadow" /></div>
         <div className="onboarding-card avatar-card">
           <span className="step-badge">STEP 2 / 3</span>
-          <h1>挑一個今天的你</h1>
-          <p>輕量角色會陪你在未來的家裡探索。之後隨時都能更改。</p>
+          <h1>挑一位小屋居民</h1>
+          <p>原創圓糯居民會陪你在未來的家裡探索，小包顏色之後隨時都能更改。</p>
           <div className="avatar-grid">
             {outfits.map((color, index) => <button key={color} className={selected === index ? "selected" : ""} onClick={() => setSelected(index)}><AvatarFigure color={color} index={index} />{selected === index && <Check />}</button>)}
           </div>
-          <button className="primary-button full large" onClick={onNext}>就是這個我<ArrowRight /></button>
+          <button className="primary-button full large" onClick={onNext}>就讓他陪我<ArrowRight /></button>
         </div>
       </div>
     </main>
@@ -728,21 +766,24 @@ function AvatarScreen({ selected, setSelected, onBack, onNext }: { selected: num
 }
 
 function SetupScreen({ selectedFloorplan, setSelectedFloorplan, selectedTheme, setSelectedTheme, onBack, onEnter }: { selectedFloorplan: string; setSelectedFloorplan: (id: string) => void; selectedTheme: string; setSelectedTheme: (id: string) => void; onBack: () => void; onEnter: () => void }) {
+  const selectedPlan = floorplans.find((floorplan) => floorplan.id === selectedFloorplan) ?? floorplans[0];
+  const canEnter = selectedPlan.sourceStatus === "ready";
   return (
     <main className="setup-page">
       <header><Brand /><span className="setup-progress"><i className="done" /><i className="done" /><i className="active" />STEP 3 / 3</span><button className="text-button" onClick={onBack}><ArrowLeft />上一步</button></header>
       <section className="setup-content">
-        <div className="setup-heading"><span className="co-brand"><Building2 size={15} />概念提案 · {proposalProject.builder} · {proposalProject.name}</span><h1>選一個坪數分帶，先住進去看看。</h1><p>公開資料僅揭露兩至三房、約 21–39 坪；目前格局為提案示意，正式導入後必須改用建商核驗圖面。</p></div>
-        <div className="setup-block"><div className="setup-block-title"><b>01</b><span><strong>選擇坪數分帶</strong><small>四種提案型 · 非正式戶別</small></span></div><div className="floorplan-grid">{floorplans.map((floorplan) => <button key={floorplan.id} className={selectedFloorplan === floorplan.id ? "selected" : ""} onClick={() => setSelectedFloorplan(floorplan.id)}><FloorplanMini accent={floorplan.accent} /><span><strong>{floorplan.name}</strong><small>{floorplan.rooms}·{floorplan.area}</small><p>{floorplan.subtitle}</p></span>{selectedFloorplan === floorplan.id && <Check className="selection-check" />}</button>)}</div></div>
+        <div className="setup-heading"><span className="co-brand"><Building2 size={15} />概念提案 · {proposalProject.builder} · {proposalProject.name}</span><h1>選擇有正式圖面依據的未來家。</h1><p>A6 與 A11 已依你提供的樣品屋大樣圖建立各自的可操作 3D Beta；其他戶型必須取得建商正式圖面後才開放。</p></div>
+        <div className="setup-block"><div className="setup-block-title"><b>01</b><span><strong>選擇正式戶型</strong><small>不以提案示意冒充正式格局</small></span></div><div className="floorplan-grid">{floorplans.map((floorplan) => <button key={floorplan.id} className={`${selectedFloorplan === floorplan.id ? "selected " : ""}source-${floorplan.sourceStatus}`} onClick={() => setSelectedFloorplan(floorplan.id)}><FloorplanMini floorplanId={floorplan.id} accent={floorplan.accent} /><span><b className="source-status">{floorplan.sourceStatus === "ready" ? "可操作" : floorplan.sourceStatus === "indexed" ? "已索引" : "待圖面"}</b><strong>{floorplan.name}</strong><small>{floorplan.rooms}·{floorplan.area}</small><p>{floorplan.subtitle}</p></span>{selectedFloorplan === floorplan.id && <Check className="selection-check" />}</button>)}</div></div>
         <div className="setup-block"><div className="setup-block-title"><b>02</b><span><strong>選擇生活主題</strong><small>預設配置後仍可自由修改</small></span></div><div className="setup-theme-grid">{themes.map((theme) => <button key={theme.id} className={selectedTheme === theme.id ? "selected" : ""} onClick={() => setSelectedTheme(theme.id)} style={{ "--theme-a": theme.palette[0], "--theme-b": theme.palette[1], "--theme-c": theme.palette[2] } as CSSProperties}><span className="setup-theme-art"><b>{theme.emoji}</b><i /></span><strong>{theme.name}</strong><small>{theme.english}</small>{selectedTheme === theme.id && <Check className="selection-check" />}</button>)}</div></div>
-        <button className="enter-experience" onClick={onEnter}><Gamepad2 />進入 3D 未來家<span>{floorplans.find((floorplan) => floorplan.id === selectedFloorplan)?.name}·{themes.find((theme) => theme.id === selectedTheme)?.name}</span><ArrowRight /></button>
+        <button className="enter-experience" disabled={!canEnter} onClick={onEnter}><Gamepad2 />{canEnter ? "進入 3D 未來家" : "此戶型尚未完成 3D 建模"}<span>{selectedPlan.name}·{themes.find((theme) => theme.id === selectedTheme)?.name}</span><ArrowRight /></button>
       </section>
     </main>
   );
 }
 
-function EditorHeader({ mode, setMode, total, budget, saveState, renderCredits, onBack, onBooking, onShare, onCart, onGallery, onMenu }: { mode: EditorMode; setMode: (mode: EditorMode) => void; total: number; budget: number; saveState: string; renderCredits: number; onBack: () => void; onBooking: () => void; onShare: () => void; onCart: () => void; onGallery: () => void; onMenu: () => void }) {
-  return <header className="editor-header"><button className="editor-back" onClick={onBack}><ArrowLeft /></button><Brand compact /><span className="header-divider" /><div className="mode-switch"><button className={mode === "explore" ? "active" : ""} onClick={() => setMode("explore")}><Gamepad2 />探索</button><button className={mode === "decorate" ? "active" : ""} onClick={() => setMode("decorate")}><MousePointer2 />佈置</button></div><div className="editor-head-spacer" /><span className={`save-state ${saveState === "error" ? "over" : ""}`}><Save size={15} />{saveState === "saved" ? "已自動儲存" : saveState === "error" ? "尚未儲存" : "儲存中…"}</span><button className="header-total"><small>目前總價</small><strong>{formatCurrency(total)}</strong><span className={total > budget ? "over" : ""}>{total > budget ? "超出預算" : "預算內"}</span></button><button className="icon-label" onClick={onGallery}><ImageIcon />作品 <b>{renderCredits}</b></button><button className="icon-label" onClick={onShare}><Share2 />分享</button><button className="icon-label" onClick={onCart}><ShoppingBag />購物車</button><button className="booking-button" onClick={onBooking}><CalendarDays />預約賞屋</button><button className="avatar-menu" onClick={onMenu}><AvatarFigure color="#6ea697" index={1} /></button></header>;
+function EditorHeader({ mode, setMode, total, budget, saveState, renderCredits, avatarIndex, onBack, onBooking, onShare, onCart, onGallery, onMenu }: { mode: EditorMode; setMode: (mode: EditorMode) => void; total: number; budget: number; saveState: string; renderCredits: number; avatarIndex: number; onBack: () => void; onBooking: () => void; onShare: () => void; onCart: () => void; onGallery: () => void; onMenu: () => void }) {
+  const pouchColors = ["#e07c62", "#6ea697", "#7389ba", "#d19a4f", "#8f75a8", "#53766a"];
+  return <header className="editor-header"><button className="editor-back" onClick={onBack}><ArrowLeft /></button><Brand compact /><span className="header-divider" /><div className="mode-switch"><button className={mode === "explore" ? "active" : ""} onClick={() => setMode("explore")}><Gamepad2 />散步</button><button className={mode === "decorate" ? "active" : ""} onClick={() => setMode("decorate")}><MousePointer2 />佈置</button></div><div className="editor-head-spacer" /><span className={`save-state ${saveState === "error" ? "over" : ""}`}><Save size={15} />{saveState === "saved" ? "已自動儲存" : saveState === "error" ? "尚未儲存" : "儲存中…"}</span><button className="header-total"><small>目前總價</small><strong>{formatCurrency(total)}</strong><span className={total > budget ? "over" : ""}>{total > budget ? "超出預算" : "預算內"}</span></button><button className="icon-label" onClick={onGallery}><ImageIcon />作品 <b>{renderCredits}</b></button><button className="icon-label" onClick={onShare}><Share2 />分享</button><button className="icon-label" onClick={onCart}><ShoppingBag />購物車</button><button className="booking-button" onClick={onBooking}><CalendarDays />預約賞屋</button><button className="avatar-menu" onClick={onMenu}><AvatarFigure color={pouchColors[avatarIndex]} index={avatarIndex} /></button></header>;
 }
 
 function BookingModal({ booking, busy, onClose, onComplete, onCheckIn }: { booking: BookingSession | null; busy: boolean; onClose: () => void; onComplete: (form: BookingDraft) => Promise<void>; onCheckIn: () => Promise<void> }) {
@@ -781,33 +822,64 @@ function BuilderDashboard() {
 }
 
 function PlatformDashboard() {
-  return <><div className="stat-grid"><Stat icon={<Building2 />} label="啟用中提案" value="01" delta="Alpha" /><Stat icon={<Store />} label="自有品牌 SKU" value="168" delta="96% 有貨" /><Stat icon={<WandSparkles />} label="本月渲染任務" value="326" delta="98.7% 成功" /><Stat icon={<BadgePercent />} label="聯盟點擊" value="742" delta="V1 追蹤" /></div><div className="admin-grid"><article className="pipeline-card span-two"><div className="card-head"><span><strong>3D 資產發布管線</strong><small>正式圖面、Q 版資產、渲染資產與碰撞驗證</small></span><button><Plus />新增資產</button></div><div className="pipeline-steps">{[["圖面取得", "等待建商核驗圖面", false], ["Q 版網格", "提案資產可預覽", true], ["渲染材質", "家具樣本已通過", true], ["碰撞／導覽網格", "正式戶型待處理", false], ["建案發布", "概念提案 v0.9", false]].map(([title, subtitle, done], index) => <div key={String(title)} className={done ? "done" : ""}><span>{done ? <Check /> : index + 1}</span><strong>{title}</strong><small>{subtitle}</small></div>)}</div></article><article className="revenue-card"><div className="card-head"><span><strong>收入引擎</strong><small>金額均為 Alpha 示意</small></span></div>{[["建案年費與用量", 46, "#e77f5f"], ["自有家具成交", 38, "#6e9f8c"], ["渲染點數", 11, "#e0b34f"], ["聯盟分潤", 5, "#7285b2"]].map(([name, percent, color]) => <div className="revenue-row" key={String(name)}><span style={{ background: String(color) }} /><strong>{name}</strong><b>{percent}%</b></div>)}</article><article className="usage-card"><div className="card-head"><span><strong>方案用量</strong><small>固定年費＋基本用量</small></span></div><div className="usage-ring"><span><strong>68%</strong><small>本月</small></span></div><div className="usage-legend"><span>3D 流量 <b>4.8 TB</b></span><span>配置儲存 <b>12.6k</b></span><span>現場贈送渲染 <b>162</b></span></div></article></div></>;
+  return <><div className="stat-grid"><Stat icon={<Building2 />} label="Pilot 戶型" value="A6" delta="客餐廳" /><Stat icon={<Store />} label="候選自有 SKU" value={String(commercialPilot.candidateOwnedSkus.length)} delta={`目標 ${commercialPilot.requiredOwnedSkuCount} 件`} /><Stat icon={<PackageCheck />} label="發布門檻" value={`${commercialPilotProgress.ready}/${commercialPilotProgress.total}`} delta="正式公開前" /><Stat icon={<LockKeyhole />} label="尚待解除" value={String(commercialPilotProgress.blocked)} delta="外部資料／串接" /></div><div className="admin-grid"><article className="pipeline-card span-two"><div className="card-head"><span><strong>A6 商業垂直切片</strong><small>未通過的門檻會阻擋正式發布</small></span><button><Eye />查看 Pilot</button></div><div className="pipeline-steps">{commercialPilot.releaseGates.map((gate, index) => <div key={gate.id} className={gate.status === "ready" ? "done" : ""}><span>{gate.status === "ready" ? <Check /> : index + 1}</span><strong>{gate.label}</strong><small>{gate.note}</small></div>)}</div></article><article className="revenue-card"><div className="card-head"><span><strong>收入引擎</strong><small>金額均為 Alpha 示意</small></span></div>{[["建案年費與用量", 46, "#e77f5f"], ["自有家具成交", 38, "#6e9f8c"], ["渲染點數", 11, "#e0b34f"], ["聯盟分潤", 5, "#7285b2"]].map(([name, percent, color]) => <div className="revenue-row" key={String(name)}><span style={{ background: String(color) }} /><strong>{name}</strong><b>{percent}%</b></div>)}</article><article className="usage-card"><div className="card-head"><span><strong>正式發布狀態</strong><small>Commercial Pilot Manifest</small></span></div><div className="usage-ring"><span><strong>{commercialPilotProgress.ready}/{commercialPilotProgress.total}</strong><small>已通過</small></span></div><div className="usage-legend"><span>戶型 <b>待 CAD</b></span><span>商品 <b>待資料包</b></span><span>付款／渲染 <b>待串接</b></span></div></article></div></>;
 }
 
 function ModalShell({ children, onClose, wide = false }: { children: ReactNode; onClose: () => void; wide?: boolean }) { return <div className="modal-backdrop" role="dialog" aria-modal="true"><div className={`modal-card ${wide ? "wide" : ""}`}><button className="modal-close" onClick={onClose} aria-label="關閉"><X /></button>{children}</div></div>; }
 function SceneLoading() { return <div className="scene-loading"><div className="loading-house"><Home /></div><strong>正在搬進你的未來家…</strong><span><i /></span></div>; }
-function VirtualPad() { return <div className="virtual-pad"><button>↑</button><button>←</button><button>↓</button><button>→</button></div>; }
+function VirtualPad({ onMove }: { onMove: (direction: { x: number; z: number }) => void }) {
+  const bind = (x: number, z: number) => ({
+    onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => { event.currentTarget.setPointerCapture(event.pointerId); onMove({ x, z }); },
+    onPointerUp: () => onMove({ x: 0, z: 0 }),
+    onPointerCancel: () => onMove({ x: 0, z: 0 }),
+    onPointerLeave: () => onMove({ x: 0, z: 0 }),
+  });
+  return <div className="virtual-pad" aria-label="居民移動方向"><button aria-label="向前" {...bind(0, -1)}>↑</button><button aria-label="向左" {...bind(-1, 0)}>←</button><button aria-label="向後" {...bind(0, 1)}>↓</button><button aria-label="向右" {...bind(1, 0)}>→</button></div>;
+}
 function Brand({ compact = false, centered = false }: { compact?: boolean; centered?: boolean }) { return <div className={`brand ${compact ? "compact" : ""} ${centered ? "centered" : ""}`}><span className="brand-mark"><i /><i /><i /></span><span><strong>居遊所</strong><small>Play Ground</small></span></div>; }
-function AvatarFigure({ color, index }: { color: string; index: number }) { return <span className={`avatar-figure hair-${index % 3}`}><i className="hair" style={{ background: ["#5f4234", "#292c32", "#9a633d"][index % 3] }} /><i className="head" /><i className="body" style={{ background: color }} /><i className="leg left" /><i className="leg right" /></span>; }
-function OnboardingArt() { return <div className="onboarding-art"><span className="art-cloud a" /><span className="art-cloud b" /><div className="onboarding-room"><span className="art-sofa" /><span className="art-lamp" /><span className="art-plant" /><span className="art-avatar"><AvatarFigure color="#6ea697" index={1} /></span></div></div>; }
-function FloorplanMini({ accent }: { accent: string }) { return <span className="floorplan-mini" style={{ "--accent": accent } as CSSProperties}><i className="room-a" /><i className="room-b" /><i className="room-c" /><i className="door" /></span>; }
+function AvatarFigure({ color, index }: { color: string; index: number }) { return <span className={`avatar-figure mascot-${index % 3}`} style={{ "--pouch": color } as CSSProperties}><i className="mascot-ear left" /><i className="mascot-ear right" /><i className="mascot-body"><b className="mascot-eye left" /><b className="mascot-eye right" /><b className="mascot-cheek left" /><b className="mascot-cheek right" /><b className="mascot-mouth" /><b className="mascot-strap" /><b className="mascot-pouch" /></i><i className="mascot-foot left" /><i className="mascot-foot right" /></span>; }
+function CategoryGlyph({ category }: { category: keyof typeof categoryLabels }) { const glyphs = { all: "✦", living: "◜", dining: "●", bedroom: "▤", decor: "✿" }; return <b aria-hidden="true">{glyphs[category]}</b>; }
+function OnboardingArt() { return <div className="onboarding-art onboarding-key-art" role="img" aria-label="原創居民的粉彩模型屋"><span>正式美術方向 · V2</span></div>; }
+function FloorplanMini({ floorplanId, accent }: { floorplanId?: string; accent: string }) {
+  const resolvedFloorplanId = floorplanId ?? floorplans.find((floorplan) => floorplan.accent === accent)?.id ?? "";
+  const runtime = getFloorplanRuntime(resolvedFloorplanId);
+  if (!runtime) return <span className="floorplan-mini pending" style={{ "--accent": accent } as CSSProperties}><span>圖面<br />待匯入</span></span>;
+  const { width, depth } = runtime.shell.dimensions;
+  return (
+    <span className="floorplan-mini" style={{ "--accent": accent } as CSSProperties}>
+      <svg viewBox={`0 0 ${width} ${depth}`} aria-label={`${resolvedFloorplanId.toUpperCase()} 戶型輪廓`}>
+        <rect x="0.08" y="0.08" width={width - 0.16} height={depth - 0.16} rx="0.08" className="plan-boundary" />
+        {runtime.shell.walls.filter((wall) => wall.kind !== "window").map((wall) => (
+          <rect key={wall.id} x={wall.center[0] + width / 2 - wall.size[0] / 2} y={wall.center[1] + depth / 2 - wall.size[1] / 2} width={wall.size[0]} height={wall.size[1]} rx="0.025" />
+        ))}
+      </svg>
+    </span>
+  );
+}
 function ProductShape({ product, large = false }: { product: FurnitureItem; large?: boolean }) { return <span className={`product-shape shape-${product.shape} ${large ? "large" : ""}`} style={{ "--shape": product.color, "--shape-accent": product.accent } as CSSProperties}><i /><b /><em /></span>; }
 function SofaGlyph() { return <span className="sofa-glyph" />; }
 function Stat({ icon, label, value, delta }: { icon: ReactNode; label: string; value: string; delta: string }) { return <article className="stat-card"><span>{icon}</span><div><small>{label}</small><strong>{value}</strong></div><b>{delta}</b></article>; }
 function AdminIcon({ index }: { index: number }) { const icons = [<Home key="home" />, <CalendarDays key="calendar" />, <Box key="box" />, <PackageCheck key="package" />, <WandSparkles key="sparkles" />, <Link2 key="link" />]; return icons[index]; }
 
-function buildInitialScene(themeId: string): SceneObjectV1[] {
+function buildInitialScene(floorplanId: string, themeId: string): SceneObjectV1[] {
   if (themeId === "empty") return [];
-  return initialFurnitureIds.map((id) => {
+  const furnitureIds = themeFurnitureIds[themeId as keyof typeof themeFurnitureIds] ?? themeFurnitureIds.sunny;
+  return buildSceneFromIds(floorplanId, themeId, furnitureIds);
+}
+
+function buildSceneFromIds(floorplanId: string, themeId: string, furnitureIds: readonly string[]): SceneObjectV1[] {
+  const runtime = getFloorplanRuntime(floorplanId) ?? getFloorplanRuntime("bh7-a6")!;
+  const materialVariant = { sunny: 0, urban: 1, family: 2, pet: 3 }[themeId] ?? 0;
+  return furnitureIds.map((id) => {
     const product = catalog.find((entry) => entry.id === id)!;
-    const position = initialPositions[id];
-    return { id: `scene-${id}`, sku: product.sku, assetVersion: product.assetVersion, position: { x: position[0], y: 0, z: position[1] }, rotation: quaternionFromY(id === "sofa-cloud" ? Math.PI : 0), materialVariant: themeId === "urban" ? 1 : 0 };
+    const position = runtime.initialPositions[id];
+    const initialAngle = ["shelf-cabin", "ikea-kallax"].includes(id) ? -Math.PI / 2 : ["sofa-cloud", "chair-breeze", "ikea-saltsjobaden", "ikea-ekenaset"].includes(id) ? Math.PI : 0;
+    return { id: `scene-${id}`, sku: product.sku, assetVersion: product.assetVersion, position: { x: position[0], y: 0, z: position[1] }, rotation: quaternionFromY(initialAngle), materialVariant };
   });
 }
-function cloneItems(items: SceneObjectV1[]) { return structuredClone(items); }
-function clamp(value: number, min: number, max: number) { return Math.min(max, Math.max(min, value)); }
-function quaternionFromY(angle: number) { return { x: 0, y: Math.sin(angle / 2), z: 0, w: Math.cos(angle / 2) }; }
-function quaternionToY(q: { x: number; y: number; z: number; w: number }) { return Math.atan2(2 * (q.w * q.y + q.x * q.z), 1 - 2 * (q.y * q.y + q.z * q.z)); }
-function collides(id: string, x: number, z: number, product: FurnitureItem, items: SceneObjectV1[]) { return items.some((item) => { if (item.id === id) return false; const other = catalog.find((entry) => entry.sku === item.sku); if (!other) return false; const padding = 0.08; return Math.abs(x - item.position.x) < (product.size.width + other.size.width) / 2 - padding && Math.abs(z - item.position.z) < (product.size.depth + other.size.depth) / 2 - padding; }); }
-function findOpenSpot(product: FurnitureItem, items: SceneObjectV1[]): [number, number] | null { const spots: [number, number][] = [[2.8, -1.5], [-2.8, -1.5], [3, 1.8], [-3, 1.8], [0, -2.4], [0, 2.35], [2.5, 0]]; return spots.find(([x, z]) => !collides("new", x, z, product, items)) ?? null; }
+function productPartnerLabel(product: FurnitureItem) {
+  if (product.brandKind === "owned") return "自有品牌";
+  if (product.partnershipStatus === "demo") return `${product.brand} 商品模擬 · 未合作`;
+  return product.cashbackRate ? `聯盟回饋 ${product.cashbackRate}%` : "聯盟品牌";
+}
 function apiMessage(error: unknown, fallback: string) { return error instanceof ApiClientError ? error.message : fallback; }

@@ -15,6 +15,10 @@ export type FurnitureItem = {
   brandKind: BrandKind;
   price: number;
   cashbackRate?: number;
+  partnershipStatus?: "demo" | "active";
+  productUrl?: string;
+  sourceUpdatedAt?: string;
+  assetPath?: string;
   color: string;
   accent: string;
   shape: "sofa" | "table" | "chair" | "lamp" | "plant" | "rug" | "shelf" | "bed";
@@ -53,6 +57,8 @@ export type Floorplan = {
   area: string;
   rooms: string;
   accent: string;
+  sourceStatus: "ready" | "indexed" | "awaiting_source";
+  shellVersion?: string;
 };
 
 export type ThemePreset = {
