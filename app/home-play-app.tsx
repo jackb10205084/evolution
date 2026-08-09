@@ -73,6 +73,7 @@ import { formatCurrency } from "./lib/domain";
 import { createEditorEngine, quaternionFromY, type EditorCommand, type EditorFloorplan, type EditorView } from "./lib/editor-engine";
 import { proposalProject } from "./lib/project";
 import { getFloorplanRuntime } from "./lib/floorplan-runtime";
+import type { SceneView } from "./lib/scene-presentation";
 import { HOMEPLAY_VISUAL_VERSION, homePlayVisual } from "./lib/visual-contract";
 
 const ExperienceCanvas = dynamic(
@@ -125,6 +126,7 @@ export function HomePlayApp() {
   const [touchMove, setTouchMove] = useState({ x: 0, z: 0 });
   const [cameraResetNonce, setCameraResetNonce] = useState(0);
   const [auditMode, setAuditMode] = useState(false);
+  const [sceneView, setSceneView] = useState<SceneView>("hero");
   const [items, setItems] = useState<SceneObjectV1[]>(initialEditorView.items);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(initialEditorView.selectedId);
   const [category, setCategory] = useState<keyof typeof categoryLabels>("all");
@@ -227,6 +229,7 @@ export function HomePlayApp() {
     }));
     setDesignReady(false);
     setAuditMode(false);
+    setSceneView("hero");
     setStage("editor");
     window.scrollTo({ top: 0, behavior: "smooth" });
     try {
@@ -235,7 +238,10 @@ export function HomePlayApp() {
       setRenderCredits(renderState.balance);
       setRenderJobs(renderState.jobs);
       if (saved) {
-        const savedObjects = saved.snapshot.objects ?? [];
+        const savedObjects = (saved.snapshot.objects ?? []).map((object) => {
+          const currentProduct = catalog.find((product) => product.sku === object.sku);
+          return currentProduct ? { ...object, assetVersion: currentProduct.assetVersion } : object;
+        });
         setDesignId(saved.id);
         const preferredSelection = savedObjects.find((object) => object.sku === "PG-SF-001")
           ?? savedObjects.find((object) => object.sku === "IKEA-195.999.18")
@@ -437,7 +443,7 @@ export function HomePlayApp() {
   }
 
   return (
-    <main className="editor-shell" data-visual-version={HOMEPLAY_VISUAL_VERSION}>
+    <main className={`editor-shell ${mode === "explore" ? "explore-mode" : "decorate-mode"}`} data-visual-version={HOMEPLAY_VISUAL_VERSION}>
       <EditorHeader
         mode={mode}
         setMode={(nextMode) => { setMode(nextMode); if (nextMode === "explore") setAuditMode(false); }}
@@ -523,10 +529,17 @@ export function HomePlayApp() {
             avatarVariant={selectedAvatar}
             cameraResetNonce={cameraResetNonce}
             auditMode={auditMode}
+            sceneView={sceneView}
           />
+          {mode === "decorate" && !auditMode && (
+            <div className="scene-view-switch" aria-label="場景視角">
+              <button className={sceneView === "hero" ? "active" : ""} onClick={() => setSceneView("hero")}>客餐廳</button>
+              <button className={sceneView === "whole" ? "active" : ""} onClick={() => setSceneView("whole")}>全屋</button>
+            </div>
+          )}
           <div className="scene-tip">
             <MousePointer2 size={15} />
-            {mode === "decorate" ? "拖曳家具移動，滾輪縮放視角" : "用 WASD 移動角色，點選家具查看"}
+            {mode === "decorate" ? (sceneView === "hero" ? "先在客餐廳近距離佈置，也可切換全屋" : "拖曳家具移動，滾輪縮放視角") : "用 WASD 移動居民，點選家具查看"}
           </div>
           <div className="scene-tools">
             <button onClick={undo} disabled={!canUndo} aria-label="復原"><Undo2 size={18} /></button>

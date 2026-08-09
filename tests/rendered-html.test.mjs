@@ -60,20 +60,29 @@ test("removes disposable starter assets and retains the generated brand card", a
 });
 
 test("locks the production experience to the approved V2 visual contract", async () => {
-  const [experience, scene, contract, styles] = await Promise.all([
+  const [experience, scene, presentation, contract, styles] = await Promise.all([
     readFile(new URL("../app/home-play-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/components/experience-canvas.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/lib/scene-presentation.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/lib/visual-contract.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
 
   assert.match(contract, /v2-original-cozy/);
   assert.match(experience, /HOMEPLAY_VISUAL_VERSION/);
+  assert.match(experience, /客餐廳/);
+  assert.match(experience, /全屋/);
   assert.match(styles, /09-a6-original-ultra-kawaii-mascot\.png/);
+  assert.match(scene, /FloorplanColliders/);
+  assert.match(scene, /AuditFloorplan/);
+  assert.match(scene, /PresentationFloorplan/);
+  assert.match(presentation, /renderer/);
+  assert.match(presentation, /residentAnchor/);
   assert.doesNotMatch(scene, /ACESFilmicToneMapping|ContactShadows|castShadow|receiveShadow/);
   assert.doesNotMatch(`${experience}\n${scene}`, /水豚/);
   await access(new URL("../public/key-art/v2/09-a6-original-ultra-kawaii-mascot.png", import.meta.url));
   await access(new URL("../docs/design-system/v2-visual-contract.md", import.meta.url));
+  await access(new URL("../docs/design-system/hero-room-visual-baselines.md", import.meta.url));
 });
 
 test("publishes only drawing-backed floorplans as playable shells", async () => {

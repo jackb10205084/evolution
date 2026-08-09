@@ -295,6 +295,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .avatar-menu .avatar-figure { transform: scale(.48) translate(16px, 18px); transform-origin: top left; }
 .editor-layout { height: calc(100vh - 68px); min-height: 622px; position: relative; overflow: hidden; }
 .catalog-panel, .detail-panel, .editor-category-rail { border: 1px solid #d6dfeb; background: rgba(255,253,248,.98); box-shadow: 0 12px 32px rgba(101,88,84,.09); }
+.editor-category-rail, .catalog-panel, .detail-panel { transition: opacity .2s ease, transform .2s ease; }
+.editor-shell.explore-mode .editor-category-rail,
+.editor-shell.explore-mode .catalog-panel { opacity: 0; pointer-events: none; transform: translateY(12px); }
+.editor-shell.explore-mode .detail-panel { width: 238px; bottom: auto; max-height: calc(100% - 92px); }
+.editor-shell.explore-mode .detail-panel .material-row,
+.editor-shell.explore-mode .detail-panel .object-actions,
+.editor-shell.explore-mode .detail-panel .budget-card { display: none; }
 .catalog-panel { height: 190px; position: absolute; left: 94px; right: 302px; bottom: 14px; z-index: 8; overflow: hidden; padding: 11px 13px 12px; border-radius: 25px; }
 .detail-panel { width: 274px; position: absolute; right: 14px; top: 14px; bottom: 14px; z-index: 8; overflow: auto; padding: 16px; border-radius: 25px; scrollbar-width: thin; }
 .editor-category-rail { width: 66px; position: absolute; left: 14px; top: 74px; bottom: 218px; z-index: 8; padding: 9px 6px; border-radius: 23px; display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
@@ -360,6 +367,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .scene-status-bar .pilot-status { padding-left: 10px; border-left: 1px solid #a9c7a2; color: #5f8068; }
 .scene-status-bar .audit-status { padding-left: 10px; border-left: 1px solid #d4b86b; color: #8a6418; }
 .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #63a67d; box-shadow: 0 0 0 4px #63a67d22; }
+.scene-view-switch { position: absolute; left: 94px; top: 16px; z-index: 7; padding: 4px; border: 1px solid #d9e2eb; border-radius: 15px; background: #fffdf8f2; display: flex; gap: 3px; box-shadow: 0 7px 18px rgba(101,88,84,.07); }
+.scene-view-switch button { height: 31px; padding: 0 11px; border: 0; border-radius: 11px; color: #7b7f82; background: transparent; font-size: 9px; font-weight: 900; cursor: pointer; transition: color .18s, background .18s, transform .18s; }
+.scene-view-switch button:hover { transform: translateY(-1px); }
+.scene-view-switch button.active { color: #655854; background: #dfe8f3; }
 .scene-tip { position: absolute; left: 50%; bottom: 216px; transform: translateX(-50%); z-index: 7; padding: 9px 13px; border: 1px solid #bfd0e2; border-radius: 99px; background: #f7fafcf2; color: #66778b; display: flex; align-items: center; gap: 6px; font-size: 9px; white-space: nowrap; box-shadow: 0 7px 18px rgba(101,88,84,.07); }
 .scene-tools { position: absolute; right: 302px; top: 16px; z-index: 7; display: grid; gap: 5px; }
 .scene-tools button { width: 40px; height: 40px; border: 1px solid #d6e0ea; border-radius: 14px; background: #fffdf8f2; display: grid; place-items: center; cursor: pointer; box-shadow: 0 7px 18px rgba(101,88,84,.07); }
@@ -568,6 +579,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .scene-tools { right: 258px; }
   .scene-tip { bottom: 226px; }
   .virtual-pad { left: 84px; bottom: 226px; }
+  .scene-view-switch { left: 84px; }
   .catalog-list { height: 129px; grid-template-rows: repeat(2, 61px); grid-auto-columns: minmax(190px,1fr); }
   .catalog-card { min-height: 61px; }
   .editor-header .icon-label { display: none; }
@@ -584,6 +596,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .scene-tools { right: 246px; top: 14px; }
   .scene-tip { bottom: 230px; }
   .virtual-pad { left: 86px; bottom: 230px; }
+  .scene-view-switch { left: 86px; }
   .scene-status-bar { left: 43%; }
   .detail-product-visual { min-height: 100px; }
   .product-shape.large { width: 132px; height: 92px; }
@@ -663,6 +676,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .demo-library-button svg { width: 16px; }
   .search-field { width: 55%; }
   .scene-tools { right: 10px; }
+  .scene-view-switch { display: none; }
   .scene-status-bar { left: 50%; }
   .scene-tip { bottom: 236px; max-width: calc(100% - 30px); overflow: hidden; text-overflow: ellipsis; }
   .virtual-pad { left: 12px; bottom: 236px; }

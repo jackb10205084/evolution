@@ -88,7 +88,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "sofa-cloud",
     sku: "PG-SF-001",
-    assetVersion: "1.2.0",
+    assetVersion: "1.3.0",
     name: "雲朵雙人沙發",
     category: "living",
     brand: "Play Ground Living",
@@ -103,7 +103,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "table-pebble",
     sku: "PG-TB-014",
-    assetVersion: "1.0.3",
+    assetVersion: "1.1.0",
     name: "小石橢圓桌",
     category: "living",
     brand: "Play Ground Living",
@@ -118,7 +118,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "chair-breeze",
     sku: "PG-CH-008",
-    assetVersion: "2.0.1",
+    assetVersion: "2.1.0",
     name: "微風扶手椅",
     category: "living",
     brand: "Play Ground Living",

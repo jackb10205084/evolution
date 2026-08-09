@@ -7,6 +7,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { EditorMode, FurnitureItem, SceneObjectV1 } from "../lib/domain";
 import { getFloorplanRuntime, resolveFloorplanPlacement, type FloorplanOpening, type FloorplanWallSegment } from "../lib/floorplan-runtime";
+import { getScenePresentation, type ScenePresentation, type SceneView } from "../lib/scene-presentation";
 import { homePlayVisual } from "../lib/visual-contract";
 
 type Props = {
@@ -23,15 +24,18 @@ type Props = {
   avatarVariant: number;
   cameraResetNonce: number;
   auditMode: boolean;
+  sceneView: SceneView;
 };
 
 const roomPalette: Record<string, { wall: string; floor: string; accent: string; sky: string; sunlight: string }> = {
-  sunny: { wall: "#f4e3cd", floor: "#dfbd95", accent: "#8eae8e", sky: "#bdd9e1", sunlight: "#f6dfb7" },
-  urban: { wall: "#dedbd4", floor: "#c7baa8", accent: "#c98576", sky: "#c1d0dc", sunlight: "#ead9c2" },
-  family: { wall: "#f1d9ba", floor: "#dfa98f", accent: "#8fb5c0", sky: "#c0dde4", sunlight: "#f2d79f" },
-  pet: { wall: "#dce5d2", floor: "#bacbac", accent: "#83a978", sky: "#bfd8d0", sunlight: "#e9dcae" },
-  empty: { wall: "#eee1ce", floor: "#d2c3af", accent: "#9cad9f", sky: "#cad9de", sunlight: "#eee0c3" },
+  sunny: { wall: "#fff8ed", floor: "#f2ddc6", accent: "#a9c7a2", sky: "#cfe3ed", sunlight: "#fff0c9" },
+  urban: { wall: "#f5f1ec", floor: "#d9cfbf", accent: "#b5bfd3", sky: "#d7e2eb", sunlight: "#f4e7d8" },
+  family: { wall: "#fff3e7", floor: "#efd6c2", accent: "#a7c8d0", sky: "#d2e7ed", sunlight: "#ffe4ac" },
+  pet: { wall: "#f4f7ec", floor: "#d9dfc9", accent: "#a6c69d", sky: "#d5e5df", sunlight: "#f7e9bd" },
+  empty: { wall: "#faf5ed", floor: "#e7dac9", accent: "#b9c7c3", sky: "#dce6e8", sunlight: "#f5ead1" },
 };
+
+const toonGradient = createToonGradient();
 
 const heroAssetPaths: Record<FurnitureItem["shape"], string> = {
   sofa: "/assets/hero-room/sofa-soft.glb",
@@ -44,31 +48,34 @@ const heroAssetPaths: Record<FurnitureItem["shape"], string> = {
   bed: "/assets/hero-room/bed-soft.glb",
 };
 
-const mascotAssetPath = "/assets/hero-room/mascot-resident.glb";
+const mascotAssetPath = "/assets/hero-room/mascot-resident.glb?v=2";
 
 export function ExperienceCanvas(props: Props) {
   const palette = roomPalette[props.themeId] ?? roomPalette.sunny;
-  const runtime = getFloorplanRuntime(props.floorplanId) ?? getFloorplanRuntime("bh7-a6")!;
+  const presentation = useMemo(
+    () => getScenePresentation(props.floorplanId, props.sceneView, props.auditMode),
+    [props.auditMode, props.floorplanId, props.sceneView],
+  );
 
   useEffect(() => {
-    props.catalog.forEach((product) => useGLTF.preload(product.assetPath ?? heroAssetPaths[product.shape]));
+    props.catalog.forEach((product) => useGLTF.preload(resolveProductAssetPath(product)));
   }, [props.catalog]);
 
   return (
     <Canvas
       orthographic
       dpr={[1, 1.75]}
-      camera={{ position: [...homePlayVisual.scene.cameraPosition], rotation: [...homePlayVisual.scene.cameraRotation], zoom: runtime.cameraZoom, near: 0.1, far: 80 }}
+      camera={{ position: [...presentation.camera.position], rotation: [...homePlayVisual.scene.cameraRotation], zoom: presentation.camera.zoom, near: 0.1, far: 80 }}
       gl={{ antialias: true, alpha: false, powerPreference: "high-performance", toneMapping: THREE.NoToneMapping }}
       onPointerMissed={() => props.onSelect(null)}
     >
       <color attach="background" args={[homePlayVisual.scene.background]} />
-      <ambientLight intensity={0.78} color="#fff8ef" />
-      <hemisphereLight args={["#fffaf1", "#cad9ce", 0.42]} />
-      <directionalLight position={[7, 11, 8]} intensity={0.62} color="#fff2df" />
+      <ambientLight intensity={1.12} color="#fffdf8" />
+      <hemisphereLight args={["#fffdf8", "#d8d5cd", 0.52]} />
+      <directionalLight position={[7, 11, 8]} intensity={0.34} color="#fffaf2" />
 
       <Physics gravity={[0, -9.81, 0]} timeStep="vary">
-        <Dollhouse palette={palette} mode={props.mode} floorplanId={props.floorplanId} auditMode={props.auditMode} />
+        <FloorplanStage palette={palette} mode={props.mode} floorplanId={props.floorplanId} presentation={presentation} />
         {props.items.map((sceneItem) => {
           const product = props.catalog.find((item) => item.sku === sceneItem.sku);
           if (!product) return null;
@@ -86,29 +93,28 @@ export function ExperienceCanvas(props: Props) {
           );
         })}
 
-        {props.mode === "explore" && (
-          <MascotResident floorplanId={props.floorplanId} mode={props.mode} touchMove={props.touchMove} variant={props.avatarVariant} />
+        {presentation.residentAnchor && (
+          <MascotResident floorplanId={props.floorplanId} mode={props.mode} touchMove={props.touchMove} variant={props.avatarVariant} anchor={presentation.residentAnchor} />
         )}
       </Physics>
-      <CameraControls floorplanId={props.floorplanId} mode={props.mode} resetNonce={props.cameraResetNonce} auditMode={props.auditMode} />
+      <CameraControls mode={props.mode} resetNonce={props.cameraResetNonce} presentation={presentation} />
     </Canvas>
   );
 }
 
-function CameraControls({ floorplanId, mode, resetNonce, auditMode }: { floorplanId: string; mode: EditorMode; resetNonce: number; auditMode: boolean }) {
+function CameraControls({ mode, resetNonce, presentation }: { mode: EditorMode; resetNonce: number; presentation: ScenePresentation }) {
   const getThree = useThree((state) => state.get);
-  const runtime = getFloorplanRuntime(floorplanId) ?? getFloorplanRuntime("bh7-a6")!;
-  const cameraZoom = auditMode ? runtime.audit.cameraZoom : runtime.cameraZoom;
+  const cameraZoom = presentation.camera.zoom;
 
   useLayoutEffect(() => {
     if (mode !== "decorate") return;
     const camera = getThree().camera;
-    camera.position.set(...homePlayVisual.scene.cameraPosition);
+    camera.position.set(...presentation.camera.position);
     camera.up.set(0, 1, 0);
-    camera.lookAt(...homePlayVisual.scene.cameraTarget);
+    camera.lookAt(...presentation.camera.target);
     if (camera instanceof THREE.OrthographicCamera) camera.zoom = cameraZoom;
     camera.updateProjectionMatrix();
-  }, [cameraZoom, floorplanId, getThree, mode, resetNonce]);
+  }, [cameraZoom, getThree, mode, presentation.camera.position, presentation.camera.target, resetNonce]);
 
   useEffect(() => {
     if (mode !== "decorate") return;
@@ -128,38 +134,58 @@ function CameraControls({ floorplanId, mode, resetNonce, auditMode }: { floorpla
   return null;
 }
 
-function Dollhouse({ palette, mode, floorplanId, auditMode }: { palette: (typeof roomPalette)[string]; mode: EditorMode; floorplanId: string; auditMode: boolean }) {
+function FloorplanStage({ palette, mode, floorplanId, presentation }: { palette: (typeof roomPalette)[string]; mode: EditorMode; floorplanId: string; presentation: ScenePresentation }) {
   const runtime = getFloorplanRuntime(floorplanId) ?? getFloorplanRuntime("bh7-a6")!;
-  const { dimensions, footprint, walls, collisionWalls, openings } = runtime.shell;
 
   return (
     <group data-floorplan-id={floorplanId}>
-      <RigidBody type="fixed" colliders={false}>
-        <CuboidCollider args={[dimensions.width / 2, 0.09, dimensions.depth / 2]} position={[0, -0.09, 0]} />
-        {collisionWalls.map((wall) => (
-          <CuboidCollider
-            key={wall.id}
-            args={[wall.size[0] / 2, wall.height / 2, wall.size[1] / 2]}
-            position={[wall.center[0], wall.height / 2, wall.center[1]]}
-            rotation={[0, wall.rotationY ?? 0, 0]}
-          />
-        ))}
-        {walls.filter((wall) => wall.kind === "partition").map((wall) => (
-          <CuboidCollider
-            key={`collision-${wall.id}`}
-            args={[wall.size[0] / 2, wall.height / 2, wall.size[1] / 2]}
-            position={[wall.center[0], wall.height / 2, wall.center[1]]}
-            rotation={[0, wall.rotationY ?? 0, 0]}
-          />
-        ))}
-      </RigidBody>
+      <FloorplanColliders floorplanId={runtime.floorplanId} />
+      {presentation.renderer === "audit" ? (
+        <AuditFloorplan floorplanId={runtime.floorplanId} palette={palette} mode={mode} />
+      ) : (
+        <PresentationFloorplan floorplanId={runtime.floorplanId} palette={palette} mode={mode} />
+      )}
+    </group>
+  );
+}
 
-      <FloorSlab footprint={footprint} floorColor={palette.floor} auditMode={auditMode} />
+function FloorplanColliders({ floorplanId }: { floorplanId: "bh7-a6" | "bh7-a11" }) {
+  const { dimensions, walls, collisionWalls } = getFloorplanRuntime(floorplanId)!.shell;
+  return (
+    <RigidBody type="fixed" colliders={false}>
+      <CuboidCollider args={[dimensions.width / 2, 0.09, dimensions.depth / 2]} position={[0, -0.09, 0]} />
+      {[...collisionWalls, ...walls.filter((wall) => wall.kind === "partition")].map((wall) => (
+        <CuboidCollider
+          key={`collision-${wall.id}`}
+          args={[wall.size[0] / 2, wall.height / 2, wall.size[1] / 2]}
+          position={[wall.center[0], wall.height / 2, wall.center[1]]}
+          rotation={[0, wall.rotationY ?? 0, 0]}
+        />
+      ))}
+    </RigidBody>
+  );
+}
 
-      {auditMode && <BlueprintOverlay floorplanId={runtime.floorplanId} />}
-      {walls.map((wall) => <ShellWall key={wall.id} wall={wall} wallColor={palette.wall} mode={mode} auditMode={auditMode} />)}
-      {openings.map((opening) => <ShellOpening key={opening.id} opening={opening} mode={mode} wallColor={palette.wall} skyColor={palette.sky} auditMode={auditMode} />)}
-      <FixedKitchen floorplanId={runtime.floorplanId} />
+function AuditFloorplan({ floorplanId, palette, mode }: { floorplanId: "bh7-a6" | "bh7-a11"; palette: (typeof roomPalette)[string]; mode: EditorMode }) {
+  const { footprint, walls, openings } = getFloorplanRuntime(floorplanId)!.shell;
+  return (
+    <group data-renderer="audit">
+      <FloorSlab footprint={footprint} floorColor={palette.floor} auditMode />
+      <BlueprintOverlay floorplanId={floorplanId} />
+      {walls.map((wall) => <ShellWall key={wall.id} wall={wall} wallColor={palette.wall} mode={mode} auditMode />)}
+      {openings.map((opening) => <ShellOpening key={opening.id} opening={opening} mode={mode} wallColor={palette.wall} skyColor={palette.sky} auditMode />)}
+    </group>
+  );
+}
+
+function PresentationFloorplan({ floorplanId, palette, mode }: { floorplanId: "bh7-a6" | "bh7-a11"; palette: (typeof roomPalette)[string]; mode: EditorMode }) {
+  const { footprint, walls, openings } = getFloorplanRuntime(floorplanId)!.shell;
+  return (
+    <group data-renderer="presentation">
+      <FloorSlab footprint={footprint} floorColor={palette.floor} auditMode={false} />
+      {walls.map((wall) => <ShellWall key={wall.id} wall={wall} wallColor={palette.wall} mode={mode} auditMode={false} />)}
+      {openings.map((opening) => <ShellOpening key={opening.id} opening={opening} mode={mode} wallColor={palette.wall} skyColor={palette.sky} auditMode={false} />)}
+      <FixedKitchen floorplanId={floorplanId} />
     </group>
   );
 }
@@ -205,21 +231,20 @@ function FloorSlab({ footprint, floorColor, auditMode }: { footprint: readonly (
 }
 
 function ShellWall({ wall, wallColor, mode, auditMode }: { wall: FloorplanWallSegment; wallColor: string; mode: EditorMode; auditMode: boolean }) {
-  const color = wall.kind === "window" ? "#cfdee2" : wall.kind === "partition" ? "#eadfd2" : wallColor;
-  const isStructuralMass = Math.min(wall.size[0], wall.size[1]) > 0.3;
-  const cutawayHeight = mode === "decorate" ? (wall.kind === "partition" ? 0.46 : 0.34) : (wall.kind === "partition" ? 0.42 : 0.34);
+  const color = wall.kind === "window" ? "#e1edf0" : wall.kind === "partition" ? "#fff2e6" : wallColor;
+  const cutawayHeight = mode === "decorate" ? (wall.kind === "partition" ? 0.4 : 0.3) : (wall.kind === "partition" ? 0.38 : 0.3);
   const displayHeight = auditMode
     ? 0.2
     : wall.view === "full"
-      ? (mode === "decorate" ? 1.48 : wall.height)
+      ? (mode === "decorate" ? 1.22 : Math.min(wall.height, 1.9))
       : Math.min(wall.height, cutawayHeight);
   return (
     <group position={[wall.center[0], 0, wall.center[1]]} rotation={[0, wall.rotationY ?? 0, 0]}>
       <RoundedBox position={[0, displayHeight / 2, 0]} args={[wall.size[0], displayHeight, wall.size[1]]} radius={0.045} smoothness={4}>
         <meshBasicMaterial color={color} toneMapped={false} />
       </RoundedBox>
-      <RoundedBox position={[0, displayHeight + 0.035, 0]} args={[wall.size[0] + 0.025, 0.07, wall.size[1] + 0.025]} radius={0.028} smoothness={3}>
-        <meshBasicMaterial color={isStructuralMass ? color : homePlayVisual.color.blueLine} />
+      <RoundedBox position={[0, displayHeight + 0.025, 0]} args={[wall.size[0] + 0.025, 0.05, wall.size[1] + 0.025]} radius={0.024} smoothness={3}>
+        <meshBasicMaterial color={auditMode ? homePlayVisual.color.blueLine : "#d1ddec"} toneMapped={false} />
       </RoundedBox>
     </group>
   );
@@ -236,7 +261,7 @@ function ShellOpening({ opening, mode, wallColor, skyColor, auditMode }: { openi
         {!auditMode && (
           <group position={[-opening.width / 2, 0, 0]} rotation={[0, -0.78, 0]}>
             <RoundedBox position={[opening.width / 2, doorHeight / 2, 0]} args={[opening.width, doorHeight, 0.055]} radius={0.035} smoothness={4}>
-              <meshToonMaterial color="#edc6a8" emissive="#edc6a8" emissiveIntensity={0.22} />
+              <meshToonMaterial color="#f5cfaa" gradientMap={toonGradient} toneMapped={false} />
             </RoundedBox>
             <mesh position={[opening.width * 0.83, doorHeight * 0.56, 0.045]}>
               <sphereGeometry args={[0.035, 12, 8]} />
@@ -275,10 +300,10 @@ function FixedKitchen({ floorplanId }: { floorplanId: "bh7-a6" | "bh7-a11" }) {
   return (
     <group position={position} rotation={rotation}>
       <RoundedBox position={[0, 0.42, 0]} args={[0.52, 0.84, 2.2]} radius={0.07} smoothness={4}>
-        <meshBasicMaterial color="#fff0d7" toneMapped={false} />
+        <meshToonMaterial color="#fff4df" gradientMap={toonGradient} toneMapped={false} />
       </RoundedBox>
       <RoundedBox position={[0.03, 0.88, 0]} args={[0.58, 0.08, 2.25]} radius={0.035} smoothness={3}>
-        <meshBasicMaterial color="#efbfa0" toneMapped={false} />
+        <meshToonMaterial color="#efc9ac" gradientMap={toonGradient} toneMapped={false} />
       </RoundedBox>
       {[-0.72, 0, 0.72].map((z) => (
         <mesh key={z} position={[0.305, 0.43, z]}>
@@ -362,7 +387,7 @@ function Furniture({
       />
       <mesh position={[0, 0.014, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[product.size.width * 0.72, product.size.depth * 0.68, 1]}>
         <circleGeometry args={[0.5, 28]} />
-        <meshBasicMaterial color="#6f625c" transparent opacity={selected ? 0.12 : 0.075} depthWrite={false} />
+        <meshBasicMaterial color="#cbaea1" transparent opacity={selected ? 0.14 : 0.085} depthWrite={false} toneMapped={false} />
       </mesh>
       <group
         ref={visualRef}
@@ -380,12 +405,12 @@ function Furniture({
 
 function FurnitureModel({ product, variant, selected }: { product: FurnitureItem; variant: number; selected: boolean }) {
   const themeTints = ["#fff7e9", "#78828b", "#f2c995", "#9fbaa0"];
-  const tintAmount = [0.04, 0.15, 0.17, 0.18][variant] ?? 0.04;
+  const tintAmount = [0.24, 0.15, 0.2, 0.2][variant] ?? 0.24;
   const baseSource = variant === 1 ? product.accent : product.color;
   const accentSource = variant === 1 ? product.color : product.accent;
   const base = `#${new THREE.Color(baseSource).lerp(new THREE.Color(themeTints[variant] ?? themeTints[0]), tintAmount).getHexString()}`;
   const accent = `#${new THREE.Color(accentSource).lerp(new THREE.Color(themeTints[variant] ?? themeTints[0]), tintAmount * 0.72).getHexString()}`;
-  const assetPath = product.assetPath ?? heroAssetPaths[product.shape];
+  const assetPath = resolveProductAssetPath(product);
   const { scene } = useGLTF(assetPath);
   const asset = useMemo(() => cloneAsToon(scene, (role, source) => {
     if (role === "leafLight") return `#${new THREE.Color(base).lerp(new THREE.Color("#f4edcf"), 0.28).getHexString()}`;
@@ -398,7 +423,7 @@ function FurnitureModel({ product, variant, selected }: { product: FurnitureItem
   return <primitive object={asset} />;
 }
 
-function cloneAsToon(sourceScene: THREE.Group, resolveColor: (role: string, source: string) => string, selected: boolean, withOutline = true) {
+function cloneAsToon(sourceScene: THREE.Group, resolveColor: (role: string, source: string) => string, selected: boolean, withOutline = true, flat = false) {
   const clone = sourceScene.clone(true);
   const meshes: THREE.Mesh[] = [];
   clone.traverse((child) => { if (child instanceof THREE.Mesh) meshes.push(child); });
@@ -408,16 +433,21 @@ function cloneAsToon(sourceScene: THREE.Group, resolveColor: (role: string, sour
     const source = original.color ? `#${original.color.getHexString()}` : "#f3e6d2";
     const color = resolveColor(role, source);
     const displayColor = new THREE.Color(color).lerp(new THREE.Color("#fff8ef"), selected ? 0.06 : 0);
-    child.material = new THREE.MeshToonMaterial({
-      color: displayColor,
-      emissive: displayColor.clone().lerp(new THREE.Color("#fff8ef"), 0.08),
-      emissiveIntensity: 0.28,
-      toneMapped: false,
-    });
-    if (withOutline) {
+    child.material = flat
+      ? new THREE.MeshBasicMaterial({ color: displayColor, toneMapped: false })
+      : new THREE.MeshToonMaterial({ color: displayColor, gradientMap: toonGradient, toneMapped: false });
+    if (withOutline && !["eyeHighlight", "cheek"].includes(role)) {
+      const outlineColor = ["eye", "mouth"].includes(role) ? homePlayVisual.color.cocoa : homePlayVisual.scene.outline;
+      const silhouette = new THREE.Mesh(
+        child.geometry,
+        new THREE.MeshBasicMaterial({ color: outlineColor, side: THREE.BackSide, transparent: true, opacity: homePlayVisual.scene.outlineOpacity, depthWrite: false, toneMapped: false }),
+      );
+      silhouette.scale.setScalar(1.028);
+      silhouette.renderOrder = 0;
+      child.add(silhouette);
       const seamLines = new THREE.LineSegments(
-        new THREE.EdgesGeometry(child.geometry, 34),
-        new THREE.LineBasicMaterial({ color: homePlayVisual.scene.outline, transparent: true, opacity: selected ? 0.2 : 0.075, depthWrite: false, toneMapped: false }),
+        new THREE.EdgesGeometry(child.geometry, 38),
+        new THREE.LineBasicMaterial({ color: outlineColor, transparent: true, opacity: selected ? 0.34 : homePlayVisual.scene.seamOpacity, depthWrite: false, toneMapped: false }),
       );
       seamLines.renderOrder = 2;
       child.add(seamLines);
@@ -446,7 +476,7 @@ function SelectionFootprint({ width, depth }: { width: number; depth: number }) 
   );
 }
 
-function MascotResident({ floorplanId, mode, touchMove, variant }: { floorplanId: string; mode: EditorMode; touchMove: { x: number; z: number }; variant: number }) {
+function MascotResident({ floorplanId, mode, touchMove, variant, anchor }: { floorplanId: string; mode: EditorMode; touchMove: { x: number; z: number }; variant: number; anchor: readonly [number, number] }) {
   const ref = useRef<THREE.Group>(null);
   const runtime = getFloorplanRuntime(floorplanId) ?? getFloorplanRuntime("bh7-a6")!;
   const keys = useRef<Record<string, boolean>>({});
@@ -454,7 +484,7 @@ function MascotResident({ floorplanId, mode, touchMove, variant }: { floorplanId
   const pouchColors = ["#e07c62", "#6ea697", "#7389ba", "#d19a4f", "#8f75a8", "#53766a"];
   const pouch = pouchColors[variant % pouchColors.length];
   const { scene } = useGLTF(mascotAssetPath);
-  const mascot = useMemo(() => cloneAsToon(scene, (role, source) => role === "pouch" ? pouch : source, false, false), [pouch, scene]);
+  const mascot = useMemo(() => cloneAsToon(scene, (role, source) => role === "pouch" ? pouch : source, false, true, true), [pouch, scene]);
 
   useEffect(() => {
     const down = (event: KeyboardEvent) => { keys.current[event.key.toLowerCase()] = true; };
@@ -474,11 +504,12 @@ function MascotResident({ floorplanId, mode, touchMove, variant }: { floorplanId
       (keys.current.s || keys.current.arrowdown ? 1 : 0) - (keys.current.w || keys.current.arrowup ? 1 : 0) + touchMove.z,
     );
     const moving = mode === "explore" && direction.lengthSq() > 0;
-    const bounceSpeed = moving ? 8.2 : 2.4;
-    const bounce = Math.abs(Math.sin(clock.elapsedTime * bounceSpeed));
-    ref.current.position.y = bounce * (moving ? 0.07 : 0.028);
-    const baseScale = mode === "explore" ? 0.92 : 0.86;
-    ref.current.scale.set(baseScale * (1 + bounce * 0.018), baseScale * (1 - bounce * 0.022), baseScale * (1 + bounce * 0.018));
+    const bounce = moving
+      ? Math.abs(Math.sin(clock.elapsedTime * 8.2))
+      : (Math.sin(clock.elapsedTime * (Math.PI * 2 / 3.1)) + 1) / 2;
+    ref.current.position.y = bounce * (moving ? 0.065 : 0.024);
+    const baseScale = mode === "explore" ? 0.8 : 0.74;
+    ref.current.scale.set(baseScale * (1 + bounce * 0.014), baseScale * (1 - bounce * 0.018), baseScale * (1 + bounce * 0.014));
     ref.current.rotation.z = THREE.MathUtils.lerp(ref.current.rotation.z, moving ? Math.sin(clock.elapsedTime * 8.2) * 0.035 : 0, Math.min(1, delta * 8));
     if (mode !== "explore") return;
     if (direction.lengthSq() > 0) {
@@ -495,20 +526,20 @@ function MascotResident({ floorplanId, mode, touchMove, variant }: { floorplanId
       facing.current = Math.atan2(direction.x, direction.y);
       ref.current.rotation.y = THREE.MathUtils.lerp(ref.current.rotation.y, facing.current, Math.min(1, delta * 10));
     }
-    const desiredCamera = new THREE.Vector3(ref.current.position.x + 5.7, 6.2, ref.current.position.z + 7.1);
+    const desiredCamera = new THREE.Vector3(ref.current.position.x + 4.6, 5.2, ref.current.position.z + 5.8);
     camera.position.lerp(desiredCamera, Math.min(1, delta * 3.2));
-    camera.lookAt(ref.current.position.x - 0.35, 0.32, ref.current.position.z - 0.35);
+    camera.lookAt(ref.current.position.x - 0.22, 0.4, ref.current.position.z - 0.22);
     if (camera instanceof THREE.OrthographicCamera) {
-      camera.zoom = THREE.MathUtils.damp(camera.zoom, runtime.cameraZoom * 1.4, 4.5, delta);
+      camera.zoom = THREE.MathUtils.damp(camera.zoom, runtime.cameraZoom * 1.72, 4.5, delta);
       camera.updateProjectionMatrix();
     }
   });
 
   return (
-    <group ref={ref} position={[runtime.mascotStart[0], 0, runtime.mascotStart[1]]} rotation={[0, 0.65, 0]} scale={mode === "explore" ? 0.92 : 0.86}>
+    <group ref={ref} position={[mode === "explore" ? runtime.mascotStart[0] : anchor[0], 0, mode === "explore" ? runtime.mascotStart[1] : anchor[1]]} rotation={[0, 0.65, 0]} scale={mode === "explore" ? 0.8 : 0.74}>
       <mesh position={[0, 0.025, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[0.7, 0.42, 1]}>
         <circleGeometry args={[0.5, 32]} />
-        <meshBasicMaterial color="#9f8d85" transparent opacity={0.07} depthWrite={false} />
+        <meshBasicMaterial color="#cfb7ac" transparent opacity={0.1} depthWrite={false} toneMapped={false} />
       </mesh>
       <primitive object={mascot} />
     </group>
@@ -519,5 +550,18 @@ function quaternionToY(q: { x: number; y: number; z: number; w: number }) {
   return Math.atan2(2 * (q.w * q.y + q.x * q.z), 1 - 2 * (q.y * q.y + q.z * q.z));
 }
 
-Object.values(heroAssetPaths).forEach((assetPath) => useGLTF.preload(assetPath));
+function createToonGradient() {
+  const gradient = new THREE.DataTexture(Uint8Array.from([206, 234, 255]), 3, 1, THREE.RedFormat);
+  gradient.magFilter = THREE.NearestFilter;
+  gradient.minFilter = THREE.NearestFilter;
+  gradient.generateMipmaps = false;
+  gradient.needsUpdate = true;
+  return gradient;
+}
+
+function resolveProductAssetPath(product: FurnitureItem) {
+  const assetPath = product.assetPath ?? heroAssetPaths[product.shape];
+  return `${assetPath}?v=${encodeURIComponent(product.assetVersion)}`;
+}
+
 useGLTF.preload(mascotAssetPath);

@@ -11,6 +11,7 @@ const server = await createServer({
 
 try {
   const runtimeModule = await server.ssrLoadModule("/app/lib/floorplan-runtime.ts");
+  const presentationModule = await server.ssrLoadModule("/app/lib/scene-presentation.ts");
   const catalogModule = await server.ssrLoadModule("/app/lib/catalog.ts");
   const expectations = {
     "bh7-a6": { width: 6.825, depth: 9.114759036144576, pages: [2, 3, 7], confirmedWidth: 6.825 },
@@ -39,6 +40,18 @@ try {
       existsSync(new URL(`../public${runtime.audit.overlayPath}`, import.meta.url)),
       `${floorplanId} PDF audit overlay is missing`,
     );
+
+    const heroPresentation = presentationModule.getScenePresentation(floorplanId, "hero", false);
+    const wholePresentation = presentationModule.getScenePresentation(floorplanId, "whole", false);
+    const auditPresentation = presentationModule.getScenePresentation(floorplanId, "hero", true);
+    assert.equal(heroPresentation.renderer, "presentation");
+    assert.equal(heroPresentation.view, "hero");
+    assert.ok(heroPresentation.camera.zoom > wholePresentation.camera.zoom, `${floorplanId} hero view must focus closer than whole-home view`);
+    assert.ok(heroPresentation.residentAnchor, `${floorplanId} presentation needs an original resident anchor`);
+    assert.equal(auditPresentation.renderer, "audit");
+    assert.equal(auditPresentation.view, "whole");
+    assert.equal(auditPresentation.camera.zoom, runtime.audit.cameraZoom);
+    assert.equal(auditPresentation.residentAnchor, null);
 
     for (const productId of catalogModule.initialFurnitureIds) {
       const product = catalogModule.catalog.find((item) => item.id === productId);
