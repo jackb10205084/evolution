@@ -269,7 +269,7 @@ function PresentationFloorplan({ floorplanId, palette, mode }: { floorplanId: "b
 // 固定牆面裝飾：掛畫與時鐘（僅在佈置模式的高牆上顯示）
 function WallDecor({ floorplanId, accent }: { floorplanId: "bh7-a6" | "bh7-a11"; accent: string }) {
   if (floorplanId !== "bh7-a6") return null;
-  const wallX = -3.24; // A6 左側外牆室內面
+  const wallX = -3.24; // A6 客廳左外牆室內面（I1A6-01）
   return (
     <group>
       {/* 拱形掛畫 */}
@@ -542,14 +542,14 @@ function ShellOpening({ opening, mode, wallColor, skyColor, auditMode }: { openi
 }
 
 function FixedKitchen({ floorplanId }: { floorplanId: "bh7-a6" | "bh7-a11" }) {
-  const position: [number, number, number] = floorplanId === "bh7-a11" ? [-2.35, 0, -2.78] : [-2.93, 0, 2.55];
+  const position: [number, number, number] = floorplanId === "bh7-a11" ? [-2.35, 0, -2.78] : [-2.94, 0, 1.68];
   const rotation: [number, number, number] = floorplanId === "bh7-a11" ? [0, Math.PI / 2, 0] : [0, 0, 0];
   return (
     <group position={position} rotation={rotation}>
       {/* 固定廚具碰撞體：散步模式不可穿越 */}
       <RigidBody type="fixed" colliders={false}>
         <CuboidCollider args={[0.34, 0.5, 1.2]} position={[0.02, 0.5, 0]} />
-        <CuboidCollider args={[0.33, 0.9, 0.34]} position={[0, 0.9, -1.52]} />
+        <CuboidCollider args={[0.33, 0.9, 0.34]} position={[0, 0.9, floorplanId === "bh7-a6" ? 1.82 : -1.52]} />
       </RigidBody>
       {/* 下櫃本體與踢腳（白門板，參考樣品屋） */}
       <RoundedBox position={[0, 0.46, 0]} args={[0.58, 0.78, 2.3]} radius={0.05} smoothness={4}>
@@ -630,8 +630,8 @@ function FixedKitchen({ floorplanId }: { floorplanId: "bh7-a6" | "bh7-a11" }) {
       <RoundedBox position={[-0.1, 2.12, -0.35]} args={[0.42, 0.16, 1.44]} radius={0.03} smoothness={3}>
         <meshToonMaterial color="#dcb98e" gradientMap={toonGradient} toneMapped={false} />
       </RoundedBox>
-      {/* 奶油色復古冰箱（圓角＋鍍鉻把手，參考樣品屋 MESO 風格但不用品牌） */}
-      <group position={[0, 0, -1.52]}>
+      {/* 冰箱：A6 在玄關（I1A6-02 REF），A11 維持廚具端 */}
+      <group position={[0, 0, floorplanId === "bh7-a6" ? 1.82 : -1.52]}>
         <RoundedBox position={[0, 0.9, 0]} args={[0.64, 1.78, 0.66]} radius={0.12} smoothness={5}>
           <meshToonMaterial color="#f4eee1" gradientMap={toonGradient} toneMapped={false} />
         </RoundedBox>

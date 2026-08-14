@@ -1,5 +1,5 @@
 import { A11_SHELL_V1 } from "./a11-shell";
-import { A6_SHELL_V1 } from "./a6-shell";
+import { A6_SHELL_V2 } from "./a6-shell";
 
 export type FloorplanWallSegment = {
   id: string;
@@ -65,26 +65,26 @@ export type FloorplanRuntime = {
 const runtimes: Record<FloorplanRuntime["floorplanId"], FloorplanRuntime> = {
   "bh7-a6": {
     floorplanId: "bh7-a6",
-    shell: A6_SHELL_V1,
+    shell: A6_SHELL_V2,
     audit: {
       overlayPath: "/assets/floorplans/a6-pdf-overlay.png",
       sourcePage: 2,
       furnishedPage: 3,
-      overlayDimensions: [A6_SHELL_V1.dimensions.width, A6_SHELL_V1.dimensions.depth],
+      overlayDimensions: [A6_SHELL_V2.dimensions.width, A6_SHELL_V2.dimensions.depth],
       confirmedWidth: 6.825,
       cameraZoom: 45,
       calibration: "confirmed-width-proportional-depth",
     },
     initialPositions: {
-      // 客廳沿圖面重排：沙發背向走道面窗、茶几在沙發與落地窗之間、層架靠左外牆、避免彼此重疊
-      "rug-meadow": [-1.8, -1.5], "sofa-cloud": [-1.7, -0.72], "table-pebble": [-1.8, -1.95], "chair-breeze": [-0.82, -2.3], "lamp-moon": [-2.72, -1.55], "plant-olive": [-2.83, -2.75], "shelf-cabin": [-2.97, -0.5],
-      "ikea-stoense": [-1.8, -1.5], "ikea-saltsjobaden": [-1.7, -0.72], "ikea-borgeby": [-1.8, -1.95], "ikea-ekenaset": [-0.82, -2.3], "ikea-lauters": [-2.72, -1.55], "ikea-fejka-fig": [-2.7, -2.75], "ikea-kallax": [-2.97, -0.5],
+      // I1A6-02 room positions, catalog millimetres (do not shrink the 1560x840 sofa to the sample-house 100x230 note).
+      "rug-meadow": [-1.85, -1.55], "sofa-cloud": [-1.85, -0.88], "table-pebble": [-1.85, -1.88], "chair-breeze": [-0.92, -2.18], "lamp-moon": [-2.72, -1.28], "plant-olive": [-2.78, -2.58], "shelf-cabin": [-2.95, 0.12],
+      "ikea-stoense": [-1.85, -1.55], "ikea-saltsjobaden": [-1.85, -0.88], "ikea-borgeby": [-1.85, -1.88], "ikea-ekenaset": [-0.92, -2.18], "ikea-lauters": [-2.72, -1.28], "ikea-fejka-fig": [-2.78, -2.58], "ikea-kallax": [-2.95, 0.12],
     },
     bonusPositions: {
-      "ikea-fejka-fig": [-0.85, 1.25], "ikea-borgeby": [-1.5, 1.3], "ikea-kallax": [2.45, -4.02], "ikea-lauters": [0.3, -3.55], "bed-soft": [1.55, -0.05],
+      "ikea-fejka-fig": [-0.88, 1.18], "ikea-borgeby": [-1.68, 1.38], "ikea-kallax": [0.72, -2.52], "ikea-lauters": [-0.58, 1.52], "bed-soft": [1.82, 0.08],
     },
-    candidateSpots: [[-2.45, 0.7], [-1.55, 0.7], [-2.45, -1.55], [-1.35, -1.55], [0.8, -0.7], [2.1, -0.7], [0.75, 0.65], [2.1, 0.65]],
-    mascotStart: [-0.9, 2.6],
+    candidateSpots: [[-2.35, 0.55], [-1.45, 0.55], [-2.35, -1.45], [-1.25, -1.45], [0.72, -2.15], [0.72, -3.05], [1.55, 0.55], [2.15, 0.55]],
+    mascotStart: [-0.82, 1.88],
     cameraZoom: 57,
   },
   "bh7-a11": {

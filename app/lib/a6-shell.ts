@@ -1,9 +1,10 @@
 import type { FloorplanOpening, FloorplanShell, FloorplanWallSegment } from "./floorplan-runtime";
 
-// PDF p.2, left-hand clean construction plan (AutoCAD point coordinates).
-// The X scale is anchored to the confirmed 682.5 cm overall width. Y uses the
-// same scale so the plan keeps the drawing's proportions without inventing a
-// second overall dimension.
+// I1A6-01 (PDF p.2) left-hand construction plan, AutoCAD page coordinates.
+// X is anchored to the labeled 682.5 cm overall width. Y uses the same scale
+// so the plan keeps the drawing's proportions. There is no single labeled
+// overall depth; the left/right vertical chains each SUM to 915 cm, while
+// this width-scale depth is ~911.5 cm. Do not treat either as CAD-confirmed.
 const pdfBounds = { x0: 146.4, y0: 137.04, x1: 534.84, y1: 655.8 } as const;
 const width = 6.825;
 const scale = width / (pdfBounds.x1 - pdfBounds.x0);
@@ -59,57 +60,66 @@ function opening(
 }
 
 const walls = [
-  // Exterior and structural walls, kept as separate AutoCAD-derived runs so
-  // openings remain actual gaps instead of painted marks on a solid box.
-  wall("outer-multi-top-right", [435.4, 137.6, 526.9, 145.1], "outer", "full"),
-  wall("outer-multi-left", [315.7, 137.6, 323.0, 218.8], "outer", "full"),
-  wall("outer-right-upper", [526.9, 137.6, 534.2, 202.9], "outer", "cutaway"),
-  wall("outer-right-mid", [526.9, 210.8, 534.2, 267.8], "outer", "cutaway"),
-  wall("outer-right-lower", [526.9, 325.1, 534.2, 647.9], "outer", "cutaway"),
-  wall("outer-left-upper", [147.0, 219.4, 154.9, 284.5], "outer", "full"),
-  wall("outer-left-lower", [147.0, 293.0, 154.3, 647.9], "outer", "full"),
-  wall("outer-bottom-left-jamb", [147.0, 647.9, 171.7, 655.3], "outer", "cutaway"),
-  wall("outer-bottom-main", [234.3, 647.9, 526.9, 655.3], "outer", "cutaway"),
+  // Exterior / structural poche from I1A6-01. Openings stay as gaps or
+  // labeled windows — the right outer run is continuous in the drawing.
+  wall("outer-balcony-column", [146.4, 137.04, 184.68, 210.84], "outer", "full"),
+  wall("outer-multi-top", [323.04, 137.64, 526.92, 145.08], "outer", "full"),
+  wall("outer-multi-left", [315.72, 137.64, 323.04, 218.76], "outer", "full"),
+  wall("outer-right", [526.92, 137.64, 534.24, 655.32], "outer", "cutaway"),
+  wall("outer-ac-block", [502.2, 145.56, 526.32, 210.84], "outer", "full"),
+  wall("outer-left-upper", [147.0, 219.36, 154.92, 284.52], "outer", "full"),
+  wall("outer-left-corner", [146.4, 284.52, 154.92, 293.04], "outer", "full"),
+  wall("outer-left-lower", [147.0, 293.04, 154.32, 647.88], "outer", "full"),
+  wall("outer-bottom-left-jamb", [147.0, 647.88, 171.7, 655.32], "outer", "cutaway"),
+  wall("outer-bottom-main", [234.3, 647.88, 526.92, 655.32], "outer", "cutaway"),
+  wall("outer-pipe-block", [502.2, 570.84, 526.32, 647.4], "outer", "cutaway"),
 
-  // Main partition spine and room boundaries from I1A6-01.
-  wall("partition-spine-upper", [318.0, 276.0, 323.6, 469.1], "partition"),
-  wall("partition-spine-lower", [318.0, 516.7, 323.6, 569.4], "partition"),
-  wall("partition-multi-master-left", [323.6, 319.9, 436.2, 325.6], "partition"),
-  wall("partition-multi-master-right", [443.5, 317.6, 526.9, 325.1], "partition"),
-  wall("partition-master-bath", [385.1, 479.3, 526.9, 484.3], "partition"),
-  wall("partition-hall-bath", [385.1, 479.3, 389.6, 564.2], "partition"),
-  wall("partition-bath-top-left", [323.6, 564.2, 346.8, 569.4], "partition"),
-  wall("partition-bath-top-center", [351.4, 564.2, 437.5, 569.4], "partition"),
-  wall("partition-bath-top-right", [442.1, 564.2, 475.8, 568.8], "partition"),
-  wall("partition-bath-left", [346.8, 568.8, 351.4, 647.9], "partition"),
-  wall("partition-bath-core", [437.5, 568.8, 442.1, 591.5], "partition"),
-  wall("partition-pipe-left", [496.6, 565.7, 501.6, 651.6], "partition"),
-  wall("partition-pipe-bottom", [442.1, 586.9, 497.0, 591.5], "partition"),
+  // Room boundaries: 多功能室 / 主臥 / 雙衛浴 / 管道間 / 玄關.
+  wall("partition-multi-ac", [436.2, 145.08, 443.52, 325.08], "partition"),
+  wall("partition-spine-stub", [318.0, 219.36, 323.64, 222.36], "partition"),
+  wall("partition-spine-upper", [318.0, 276.0, 323.64, 469.08], "partition"),
+  wall("partition-spine-lower", [318.0, 516.72, 323.64, 569.4], "partition"),
+  wall("partition-multi-master-left", [323.64, 319.92, 436.2, 325.56], "partition"),
+  wall("partition-multi-master-right", [443.52, 317.64, 526.92, 325.08], "partition"),
+  wall("partition-master-bath", [385.08, 479.28, 526.92, 484.32], "partition"),
+  wall("partition-hall-bath", [385.08, 479.28, 389.64, 564.24], "partition"),
+  wall("partition-bath-top-left", [323.64, 564.24, 346.8, 569.4], "partition"),
+  wall("partition-bath-top-center", [351.36, 564.24, 437.52, 569.4], "partition"),
+  wall("partition-bath-top-right", [442.08, 564.24, 475.8, 568.8], "partition"),
+  wall("partition-bath-left", [346.8, 568.8, 351.36, 647.88], "partition"),
+  wall("partition-bath-core", [437.52, 568.8, 442.08, 591.48], "partition"),
+  wall("partition-pipe-left", [496.56, 565.68, 501.6, 651.6], "partition"),
+  wall("partition-pipe-bottom", [442.08, 586.92, 497.04, 591.48], "partition"),
+  wall("partition-bath-pipe-jog", [475.8, 550.08, 480.36, 568.8], "partition"),
+  wall("partition-entry-dining", [154.92, 563.76, 262.68, 573.96], "partition"),
+  wall("partition-entry-cabinet", [154.92, 573.96, 166.32, 647.4], "partition"),
 ] satisfies FloorplanWallSegment[];
 
 const openings = [
   opening("living-balcony-window", "sliding-door", [154.9, 215.1, 315.1, 215.1], 0, 0.05, 2.3),
-  opening("multi-balcony-window", "sliding-door", [323.0, 141.3, 435.4, 141.3], 0, 0.05, 2.3),
-  opening("multi-side-door", "door", [530.5, 267.8, 530.5, 317.6], Math.PI / 2, 0, 2.1),
-  opening("master-entry-door", "door", [320.8, 469.1, 320.8, 516.7], Math.PI / 2, 0, 2.1, 0.1),
-  opening("main-bath-door", "door", [346.8, 566.7, 351.4, 566.7], 0, 0, 2.1, 0.1),
-  opening("secondary-bath-door", "door", [437.5, 566.7, 442.1, 566.7], 0, 0, 2.1, 0.1),
+  opening("multi-north-window", "window", [359.6, 141.36, 399.4, 141.36], 0, 0.9, 1.0),
+  opening("ac-side-window", "window", [530.58, 157.6, 530.58, 197.4], Math.PI / 2, 0.9, 1.0),
+  opening("guest-bath-window", "window", [450.1, 651.6, 489.9, 651.6], 0, 0.9, 1.0),
+  opening("multi-entry-door", "door", [320.82, 222.36, 320.82, 276.0], Math.PI / 2, 0, 2.1, 0.1),
+  opening("master-entry-door", "door", [320.82, 469.08, 320.82, 516.72], Math.PI / 2, 0, 2.1, 0.1),
+  opening("ensuite-door", "door", [387.36, 500.0, 387.36, 545.5], Math.PI / 2, 0, 2.1, 0.1),
+  opening("guest-bath-door", "door", [349.08, 590.0, 349.08, 635.5], Math.PI / 2, 0, 2.1, 0.1),
   opening("entry-door", "door", [171.7, 651.6, 234.3, 651.6], 0, 0, 2.1),
 ] satisfies FloorplanOpening[];
 
 const footprint = [
-  point(315.7, 137.6), point(534.2, 137.6), point(534.2, 655.3),
-  point(147.0, 655.3), point(147.0, 211.3), point(315.7, 211.3),
+  point(315.72, 137.04), point(534.24, 137.04), point(534.24, 655.8),
+  point(146.4, 655.8), point(146.4, 211.32), point(315.72, 211.32),
 ] as const;
 
-export const A6_SHELL_V1 = {
+export const A6_SHELL_V2 = {
   schemaVersion: "1.0" as const,
   status: "drawing-audit-runtime-shell" as const,
   source: {
     pdf: "遠雄BH7樣品屋大樣圖 0718.pdf",
     drawingSet: "A6",
     pages: { dimensions: 2, furnishedPlan: 3, ceilingAndHeights: 7 },
-    caveat: "Walls and openings trace I1A6-01; proportional depth still requires CAD/Blender verification.",
+    caveat: "Walls and openings trace I1A6-01 poche; 682.5 cm width is labeled. Depth uses the same width scale (~9.115 m). Labeled vertical chains sum to 915 cm but no single overall depth is printed. Ceiling collision height 2.85 m is an interactive simplification (CH220–CH290 on I1A6-06).",
   },
   dimensions: { width, depth, wallHeight, outerWall: outer, partitionWall: 0.1 },
   footprint,
@@ -124,4 +134,7 @@ export const A6_SHELL_V1 = {
   collisionWalls: walls.filter((segment) => segment.kind === "outer"),
 } as const satisfies FloorplanShell;
 
-export const A6_EDITABLE_BOUNDS = A6_SHELL_V1.editableBounds;
+/** @deprecated Use A6_SHELL_V2. Kept so older adapters keep resolving. */
+export const A6_SHELL_V1 = A6_SHELL_V2;
+
+export const A6_EDITABLE_BOUNDS = A6_SHELL_V2.editableBounds;
