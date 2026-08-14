@@ -9,7 +9,7 @@ export const floorplans: Floorplan[] = [
     rooms: "主臥＋多功能室＋2 衛",
     accent: "#f4b86a",
     sourceStatus: "ready",
-    shellVersion: "A6_SHELL_V2",
+    shellVersion: "A6_SHELL_V3",
   },
   {
     id: "bh7-a11",

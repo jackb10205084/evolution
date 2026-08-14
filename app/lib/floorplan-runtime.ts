@@ -1,5 +1,5 @@
 import { A11_SHELL_V1 } from "./a11-shell";
-import { A6_SHELL_V2 } from "./a6-shell";
+import { A6_SHELL_V3 } from "./a6-shell";
 
 export type FloorplanWallSegment = {
   id: string;
@@ -65,12 +65,12 @@ export type FloorplanRuntime = {
 const runtimes: Record<FloorplanRuntime["floorplanId"], FloorplanRuntime> = {
   "bh7-a6": {
     floorplanId: "bh7-a6",
-    shell: A6_SHELL_V2,
+    shell: A6_SHELL_V3,
     audit: {
       overlayPath: "/assets/floorplans/a6-pdf-overlay.png",
       sourcePage: 2,
       furnishedPage: 3,
-      overlayDimensions: [A6_SHELL_V2.dimensions.width, A6_SHELL_V2.dimensions.depth],
+      overlayDimensions: [A6_SHELL_V3.dimensions.width, A6_SHELL_V3.dimensions.depth],
       confirmedWidth: 6.825,
       cameraZoom: 45,
       calibration: "confirmed-width-proportional-depth",

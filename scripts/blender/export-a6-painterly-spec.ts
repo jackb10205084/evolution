@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { A6_SHELL_V2 } from "../../app/lib/a6-shell";
+import { A6_SHELL_V3 } from "../../app/lib/a6-shell";
 import { catalog } from "../../app/lib/catalog";
 import { getFloorplanRuntime } from "../../app/lib/floorplan-runtime";
 import { getScenePresentation } from "../../app/lib/scene-presentation";
@@ -46,16 +46,16 @@ const spec = {
   generatedAt: new Date().toISOString(),
   sourceTrace: {
     floorplanSource: "docs/assets/source/遠雄BH7樣品屋大樣圖_0718.pdf",
-    dimensionsPage: A6_SHELL_V2.source.pages.dimensions,
-    furnishedPlanPage: A6_SHELL_V2.source.pages.furnishedPlan,
-    ceilingPage: A6_SHELL_V2.source.pages.ceilingAndHeights,
+    dimensionsPage: A6_SHELL_V3.source.pages.dimensions,
+    furnishedPlanPage: A6_SHELL_V3.source.pages.furnishedPlan,
+    ceilingPage: A6_SHELL_V3.source.pages.ceilingAndHeights,
     runtimeSource: "app/lib/a6-shell.ts",
     visualContract: "docs/design-system/v2-visual-contract.md",
     painterlyAddendum: "docs/design-system/blender-painterly-lookdev-v1.md",
-    caveat: A6_SHELL_V2.source.caveat,
+    caveat: A6_SHELL_V3.source.caveat,
   },
   coordinateSystem: { units: "meter", upAxis: "Y", forwardAxis: "-Z", handedness: "right" },
-  shell: A6_SHELL_V2,
+  shell: A6_SHELL_V3,
   furniture,
   resident: {
     id: "homeplay-pebble-resident-v1",
@@ -75,7 +75,7 @@ const spec = {
     ],
   },
   fixedKitchen: {
-    sourcePage: A6_SHELL_V2.source.pages.furnishedPlan,
+    sourcePage: A6_SHELL_V3.source.pages.furnishedPlan,
     status: "furnished-plan-visual-proxy",
     run: { x: -2.94, z: 1.70, width: 0.54, depth: 2.30, counterHeight: 0.88 },
   },
