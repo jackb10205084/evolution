@@ -7,13 +7,19 @@ import * as THREE from "three";
 const assetDirectory = path.resolve("public/assets/hero-room");
 const reportDirectory = path.resolve("outputs/gltf-validation");
 const manifest = JSON.parse(await readFile(path.join(assetDirectory, "manifest.json"), "utf8"));
+const p1Envelopes = JSON.parse(await readFile(path.resolve("scripts/p1-sku-envelopes.json"), "utf8"));
 const requiredAssets = [
   "sofa-soft.glb",
   "table-pebble.glb",
+  "chair-breeze.glb",
+  "hp-a475-ar-pla-tb-02.glb",
+  "hp-a213-dme52-b00ddf.glb",
+  "hp-a213-dme52-0d4db8.glb",
   "ikea-saltsjobaden.glb",
   "ikea-borgeby.glb",
   "mascot-resident.glb",
 ];
+const p1ByFile = new Map(p1Envelopes.skus.map((sku) => [sku.file, sku]));
 
 assert.equal(manifest.version, 2);
 assert.equal(manifest.visualContractVersion, "v2-original-cozy");
@@ -23,6 +29,7 @@ assert.equal(manifest.pipeline.optimizer, "@gltf-transform/cli");
 assert.equal(manifest.pipeline.compression, "meshopt");
 assert.equal(manifest.pipeline.validator, "Khronos glTF Validator");
 requiredAssets.forEach((file) => assert.ok(manifest.assets.includes(file), `${file} missing from manifest`));
+p1Envelopes.skus.forEach((sku) => assert.ok(manifest.assets.includes(sku.file), `${sku.catalog_id} GLB missing from manifest`));
 
 await mkdir(reportDirectory, { recursive: true });
 const reports = [];
@@ -62,16 +69,35 @@ for (const file of manifest.assets) {
     return meshTotal + indexAccessor.count / 3;
   }, 0), 0);
   assert.ok(triangles <= 100_000, `${file} exceeds the 100k triangle budget`);
+  const p1 = p1ByFile.get(file);
+  if (p1) {
+    const expected = [p1.width_mm / 1000, p1.height_mm / 1000, p1.depth_mm / 1000];
+    const actual = [size.x, size.y, size.z];
+    const epsilon = p1Envelopes.epsilon_m;
+    actual.forEach((value, index) => {
+      const delta = Math.abs(value - expected[index]);
+      assert.ok(
+        delta <= epsilon,
+        `${p1.catalog_id} ${["W", "H", "D"][index]} ${value.toFixed(4)} m != catalog ${expected[index]} m (Δ ${delta.toFixed(4)} > ${epsilon})`,
+      );
+    });
+  }
+
   reports.push({
     file,
+    catalogId: p1?.catalog_id,
     triangles: Math.round(triangles),
-    size: size.toArray().map((value) => Number(value.toFixed(3))),
+    size: size.toArray().map((value) => Number(value.toFixed(4))),
+    catalogMm: p1 ? [p1.width_mm, p1.depth_mm, p1.height_mm] : undefined,
     specInfos: specReport.issues.numInfos,
   });
 }
 
 console.log(`Validated ${reports.length} V2 hero-room GLB assets with Khronos glTF Validator.`);
-for (const report of reports) console.log(`${report.file}: ${report.triangles} tris · ${report.size.join(" × ")} m · ${report.specInfos} spec infos`);
+for (const report of reports) {
+  const sku = report.catalogId ? ` · ${report.catalogId} catalog ${report.catalogMm.join("×")} mm` : "";
+  console.log(`${report.file}: ${report.triangles} tris · ${report.size.join(" × ")} m${sku} · ${report.specInfos} spec infos`);
+}
 
 function parseGlb(buffer, file) {
   assert.equal(buffer.readUInt32LE(0), 0x46546c67, `${file} has invalid GLB magic`);

@@ -4,7 +4,7 @@
   "style": "high-key-pastel-dollhouse",
   "units": "meter",
   "upAxis": "Y",
-  "generatedBy": "HomePlay round-nuo watercolor GLB builder",
+  "generatedBy": "HomePlay P1 SKU watercolor GLB builder",
   "pipeline": {
     "optimizer": "@gltf-transform/cli",
     "compression": "meshopt",
@@ -13,14 +13,73 @@
     "simplifiesGeometry": false
   },
   "lookdev": {
-    "shapeLanguage": "round-nuo-volume",
+    "shapeLanguage": "sku-silhouette-round-nuo",
     "albedo": "watercolor-wash",
     "shading": "web-toon-unlit"
   },
+  "p1Skus": [
+    {
+      "file": "sofa-soft.glb",
+      "catalogId": "HP-A475-AR-MEL-SO-02-C1AA23",
+      "envelope": {
+        "width": 1.56,
+        "depth": 0.84,
+        "height": 0.72
+      }
+    },
+    {
+      "file": "chair-breeze.glb",
+      "catalogId": "HP-A475-AR-DON-LO-01-04C7E8",
+      "envelope": {
+        "width": 0.77,
+        "depth": 0.67,
+        "height": 0.76
+      }
+    },
+    {
+      "file": "table-pebble.glb",
+      "catalogId": "HP-A475-AR-PLA-TB-01-93B567",
+      "envelope": {
+        "width": 0.7,
+        "depth": 0.7,
+        "height": 0.38
+      }
+    },
+    {
+      "file": "hp-a475-ar-pla-tb-02.glb",
+      "catalogId": "HP-A475-AR-PLA-TB-02-9D2ADC",
+      "envelope": {
+        "width": 0.38,
+        "depth": 0.38,
+        "height": 0.46
+      }
+    },
+    {
+      "file": "hp-a213-dme52-b00ddf.glb",
+      "catalogId": "HP-A213-DME52-B00DDF",
+      "envelope": {
+        "width": 1,
+        "depth": 1,
+        "height": 0.75
+      }
+    },
+    {
+      "file": "hp-a213-dme52-0d4db8.glb",
+      "catalogId": "HP-A213-DME52-0D4DB8",
+      "envelope": {
+        "width": 0.8,
+        "depth": 0.8,
+        "height": 0.75
+      }
+    }
+  ],
   "assets": [
     "sofa-soft.glb",
     "chair-breeze.glb",
     "table-pebble.glb",
+    "hp-a475-ar-pla-tb-02.glb",
+    "hp-a213-dme52-b00ddf.glb",
+    "hp-a213-dme52-0d4db8.glb",
     "rug-meadow.glb",
     "lamp-moon.glb",
     "plant-olive.glb",

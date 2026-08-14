@@ -9,16 +9,18 @@ import * as THREE from "three";
 const assetDirectory = path.resolve("public/assets/hero-room");
 const outputPath = path.resolve("docs/design-system/lookdev-cute-3d-contact.png");
 const files = [
-  "sofa-soft.glb", "chair-breeze.glb", "table-pebble.glb", "rug-meadow.glb",
-  "lamp-moon.glb", "plant-olive.glb", "shelf-cabin.glb", "bed-soft.glb",
-  "ikea-saltsjobaden.glb", "ikea-borgeby.glb", "ikea-ekenaset.glb", "ikea-stoense.glb",
-  "ikea-lauters.glb", "ikea-fejka-fig.glb", "ikea-kallax.glb", "mascot-resident.glb",
+  "sofa-soft.glb",
+  "chair-breeze.glb",
+  "table-pebble.glb",
+  "hp-a475-ar-pla-tb-02.glb",
+  "hp-a213-dme52-b00ddf.glb",
+  "hp-a213-dme52-0d4db8.glb",
 ];
 
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ "meshopt.decoder": MeshoptDecoder });
-const tile = 360;
-const cols = 4;
-const rows = 4;
+const tile = 420;
+const cols = 3;
+const rows = 2;
 const pad = 18;
 const sheetWidth = cols * tile + pad * 2;
 const sheetHeight = rows * tile + pad * 2 + 36;

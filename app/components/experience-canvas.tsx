@@ -752,6 +752,7 @@ function FurnitureModel({ product, variant, selected }: { product: FurnitureItem
   const { scene } = useGLTF(assetPath);
   const asset = useMemo(() => cloneAsToon(scene, (role, source) => {
     if (role === "leafLight") return `#${new THREE.Color(base).lerp(new THREE.Color("#f4edcf"), 0.28).getHexString()}`;
+    if (role === "legs") return source;
     if (role === "wood" && ["sofa", "chair"].includes(product.shape)) return source;
     if (["primary", "wood", "frame", "shade", "leaf"].includes(role)) return base;
     if (["cream", "accent", "edge", "pot", "metal", "mattress", "blanket"].includes(role)) return accent;

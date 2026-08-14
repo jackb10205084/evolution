@@ -1,6 +1,7 @@
 /**
  * Deterministic hero-room GLB builder for v2-original-cozy.
- * Shape language: overlapping blobs / chubby frames (圓糯), not CAD boxes.
+ * P1 SKUs use catalog-true silhouettes (real product parts, 圓糯 edges only).
+ * Remaining hero set-dressing keeps the previous chubby watercolor language.
  * Materials: matte pastel PBR (metallic 0, roughness 0.96) plus a paper-white
  * watercolor wash texture multiplied in the web MeshToonMaterial path.
  */
@@ -9,6 +10,7 @@ import { deflateSync } from "node:zlib";
 import path from "node:path";
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
+import { fitToEnvelope, p1Assets } from "./p1-sku-builders.mjs";
 
 const outputDir = path.resolve("public/assets/hero-room");
 await mkdir(outputDir, { recursive: true });
@@ -217,45 +219,7 @@ function watercolorWash(seed, size = 96) {
   return encodePng(size, size, rgba);
 }
 
-const assets = [
-  {
-    file: "sofa-soft.glb",
-    colors: { primary: "#f4eadb", cream: "#fffaf1", accent: "#a9c7b3", wood: "#ae8464" },
-    build(add) {
-      add(blob(1.96, 0.34, 0.8, 32), "primary", [0, 0.31, 0.02]);
-      add(blob(0.74, 0.46, 0.32, 30), "primary", [-0.58, 0.6, 0.24], [-0.2, 0, 0]);
-      add(blob(0.82, 0.5, 0.34, 32), "primary", [0, 0.64, 0.26], [-0.2, 0, 0]);
-      add(blob(0.74, 0.46, 0.32, 30), "primary", [0.58, 0.6, 0.24], [-0.2, 0, 0]);
-      add(blob(0.32, 0.46, 0.7, 28), "primary", [-0.9, 0.42, 0]);
-      add(blob(0.32, 0.46, 0.7, 28), "primary", [0.9, 0.42, 0]);
-      add(blob(0.88, 0.14, 0.56, 24), "cream", [-0.42, 0.5, -0.08]);
-      add(blob(0.88, 0.14, 0.56, 24), "cream", [0.42, 0.5, -0.08]);
-      add(blob(0.38, 0.26, 0.15, 20), "accent", [0.42, 0.66, 0.1], [0.16, 0.32, -0.1]);
-      for (const x of [-0.7, 0.7]) for (const z of [-0.24, 0.24]) add(peg(0.04, 0.055, 0.14, 14), "wood", [x, 0.07, z]);
-    },
-  },
-  {
-    file: "chair-breeze.glb",
-    colors: { primary: "#8fb4a8", cream: "#f6e6c9", wood: "#9c7657" },
-    build(add) {
-      add(blob(0.72, 0.2, 0.68, 28), "cream", [0, 0.44, 0.02]);
-      add(blob(0.68, 0.42, 0.22, 28), "primary", [0, 0.62, 0.22], [-0.16, 0, 0]);
-      add(blob(0.16, 0.22, 0.52, 20), "primary", [-0.34, 0.56, 0.02]);
-      add(blob(0.16, 0.22, 0.52, 20), "primary", [0.34, 0.56, 0.02]);
-      for (const x of [-0.26, 0.26]) for (const z of [-0.24, 0.24]) {
-        add(peg(0.036, 0.05, 0.4, 14), "wood", [x, 0.2, z], [z * 0.1, 0, -x * 0.1]);
-      }
-    },
-  },
-  {
-    file: "table-pebble.glb",
-    colors: { wood: "#b98c64", edge: "#d9b58c" },
-    build(add) {
-      add(pebbleTop(0.52, 0.12, 56), "wood", [0, 0.3, 0], [0, 0, 0], [1.06, 1, 0.7]);
-      add(blob(0.22, 0.28, 0.22, 20), "edge", [0, 0.18, 0]);
-      add(pebbleTop(0.34, 0.07, 36), "wood", [0, 0.0, 0], [0, 0, 0], [1, 1, 0.78]);
-    },
-  },
+const dressingAssets = [
   {
     file: "rug-meadow.glb",
     colors: { primary: "#e0bd7e", accent: "#f3dfb4" },
@@ -445,6 +409,12 @@ const assets = [
   },
 ];
 
+const p1Files = new Set(p1Assets.map((asset) => asset.file));
+const assets = [
+  ...p1Assets,
+  ...dressingAssets.filter((asset) => !p1Files.has(asset.file)),
+];
+
 for (const asset of assets) {
   await createGlb(asset);
 }
@@ -457,7 +427,7 @@ await writeFile(
     style: "high-key-pastel-dollhouse",
     units: "meter",
     upAxis: "Y",
-    generatedBy: "HomePlay round-nuo watercolor GLB builder",
+    generatedBy: "HomePlay P1 SKU watercolor GLB builder",
     pipeline: {
       optimizer: "@gltf-transform/cli",
       compression: "meshopt",
@@ -466,10 +436,11 @@ await writeFile(
       simplifiesGeometry: false,
     },
     lookdev: {
-      shapeLanguage: "round-nuo-volume",
+      shapeLanguage: "sku-silhouette-round-nuo",
       albedo: "watercolor-wash",
       shading: "web-toon-unlit",
     },
+    p1Skus: p1Assets.map(({ file, catalogId, envelope }) => ({ file, catalogId, envelope })),
     assets: assets.map(({ file }) => file),
   }, null, 2),
 );
@@ -488,7 +459,7 @@ function ensureUv(geometry) {
   geometry.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
 }
 
-async function createGlb({ file, colors, build }) {
+async function createGlb({ file, colors, build, envelope, doubleSided = false }) {
   const nodes = [];
   const meshes = [];
   const images = [];
@@ -520,7 +491,7 @@ async function createGlb({ file, colors, build }) {
     materialIndexes.set(name, materials.length);
     materials.push({
       name,
-      doubleSided: false,
+      doubleSided: Boolean(envelope) || doubleSided,
       pbrMetallicRoughness: {
         baseColorFactor: [...new THREE.Color(color).toArray(), 1],
         baseColorTexture: { index: imageIndex },
@@ -572,10 +543,20 @@ async function createGlb({ file, colors, build }) {
     nodes.push({ mesh: meshIndex, name: materialName, translation: position, rotation: quaternion.toArray(), scale });
   };
 
-  build(add);
+  if (envelope) {
+    const parts = [];
+    build((geometry, materialName, position = [0, 0, 0], rotation = [0, 0, 0], scale = [1, 1, 1]) => {
+      parts.push({ geometry, materialName, position, rotation, scale });
+    });
+    for (const part of fitToEnvelope(parts, envelope)) {
+      add(part.geometry, part.materialName, part.position, part.rotation, part.scale);
+    }
+  } else {
+    build(add);
+  }
   const binary = Buffer.concat(chunks);
   const gltf = {
-    asset: { version: "2.0", generator: "HomePlay v2-original-cozy round-nuo builder" },
+    asset: { version: "2.0", generator: "HomePlay v2-original-cozy P1 SKU builder" },
     scene: 0,
     scenes: [{ nodes: nodes.map((_, index) => index) }],
     nodes,
