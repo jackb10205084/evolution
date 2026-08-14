@@ -58,10 +58,14 @@ try {
       assert.ok(product, `${productId} is missing from the catalog`);
       const position = runtime.initialPositions[productId];
       assert.ok(position, `${floorplanId}/${productId} has no curated initial position`);
+      const sideFacing = catalogModule.sideFacingFurnitureIds.includes(productId);
+      const footprint = sideFacing
+        ? { width: product.size.depth, depth: product.size.width, height: product.size.height }
+        : product.size;
       const placement = runtimeModule.resolveFloorplanPlacement(
         floorplanId,
         { x: position[0], z: position[1] },
-        product.size,
+        footprint,
       );
       assert.equal(placement.blocked, false, `${floorplanId}/${productId} intersects a wall`);
       assert.equal(placement.x, position[0], `${floorplanId}/${productId} starts outside X bounds`);

@@ -1,6 +1,6 @@
 # BH7 Hero Room V2 — Active execution plan
 
-Last updated: 2026-08-09
+Last updated: 2026-08-10
 
 ## Outcome
 
@@ -25,6 +25,31 @@ Deliver a trustworthy, playable BH7 proposal in the approved original cozy art d
 - The A6 and A11 shells are now `drawing-audit-runtime-shell`: they can be compared against PDF overlays, but are not Blender/CAD-issued construction models.
 - Runtime art uses the `v2-original-cozy` manifest. Every generated GLB must pass scale, floor pivot, material and triangle-budget validation.
 - The browser automation environment currently rejects localhost navigation. Reachability is verified by `npm run preview:check`; visual approval stays open instead of being falsely marked complete.
+
+## 2026-08-10 completeness pass (Gate 3B deltas applied)
+
+Applied one delta class at a time against key art 09, same scene data and camera recipes:
+
+- Shell: decorate-mode walls raised to readable dollhouse heights (full 2.06 m, cutaway 0.9–0.94 m) with baseboards; explore mode keeps low cutaways for character visibility.
+- Openings: white window frames, mullions by panel width, distant-greenery band in glass, and cream curtain panels + wood rod on wide sliding doors (interior +z, both A6 sliders are rotY 0).
+- Floor: procedural flat-tone plank CanvasTexture (no photo grain) layered on the slab top; audit mode unchanged.
+- Fixed kitchen rebuilt as a full set: doored base cabinets with handles, wood counter, sink + faucet, two-burner hob, backsplash, upper cabinets, fridge, and counter props.
+- Wall decor (decorate mode, A6 only): two framed prints and a clock on the left full wall at x = -3.24.
+- Sunny theme now furnishes the whole unit: 7 owned + fejka/borgeby/kallax/lauters + bed-soft via new `bonusPositions` per floorplan (IKEA demo swap positions untouched).
+
+Verified: lint clean, `npm test` 12/12 with build and asset/floorplan/pilot audits, in-browser review at 1440×900 and 1180×820 (desktop + iPad landscape). Human visual approval for Gate 3B remains open.
+
+## 2026-08-10 sample-house feedback pass
+
+Fixes from the on-site sample-house walkthrough (photos supplied):
+
+- Explore-mode glitches: door leaves no longer render at full 2.1 m over 0.3 m cutaway stubs (they follow cutaway height, ajar angle reduced), window glass is capped below wall tops, and the window greenery band moved behind the glass to stop coplanar flicker.
+- Fixed kitchen now has fixed colliders, so the resident cannot walk through the counter or fridge; resident spawn moved out of the new bed footprint to the dining hall.
+- Default living-room layout re-curated from the A6 drawing: coffee table sits between sofa and balcony window, shelf hugs the left outer wall, plant/lamp/chair no longer overlap; wall art and clock repositioned above the new shelf line.
+- Interior style aligned to the sample house: white cabinet fronts with grey quartz counter, chimney range hood, cream retro fridge with chrome handles, IH hob, lighter washed-oak floor, whiter sheer curtains.
+- `sideFacingFurnitureIds` is now shared between the app and `validate-floorplan-runtime.mjs`, so rotated shelves validate with their true footprint.
+
+Verified: lint clean, `npm test` 12/12, decorate + explore review in browser. Wall segments were re-checked against the p.2 trace; the "walls that should not exist" impression came from full-height door leaves and curtain slabs on stub walls, both fixed above.
 
 ## Next executable slice
 

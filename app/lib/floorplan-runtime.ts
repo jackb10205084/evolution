@@ -56,6 +56,7 @@ export type FloorplanRuntime = {
     calibration: "confirmed-width-proportional-depth";
   };
   initialPositions: Readonly<Record<string, readonly [number, number]>>;
+  bonusPositions: Readonly<Record<string, readonly [number, number]>>;
   candidateSpots: readonly (readonly [number, number])[];
   mascotStart: readonly [number, number];
   cameraZoom: number;
@@ -75,11 +76,15 @@ const runtimes: Record<FloorplanRuntime["floorplanId"], FloorplanRuntime> = {
       calibration: "confirmed-width-proportional-depth",
     },
     initialPositions: {
-      "rug-meadow": [-1.92, -0.42], "sofa-cloud": [-2.04, -0.92], "table-pebble": [-1.48, -0.08], "chair-breeze": [-0.92, -0.72], "lamp-moon": [-2.84, -1.18], "plant-olive": [-2.82, -2.12], "shelf-cabin": [-2.4, -1.82],
-      "ikea-stoense": [-1.85, -0.42], "ikea-saltsjobaden": [-2.02, -0.92], "ikea-borgeby": [-1.45, -0.08], "ikea-ekenaset": [-0.88, -0.72], "ikea-lauters": [-2.82, -1.18], "ikea-fejka-fig": [-2.76, -2.1], "ikea-kallax": [-2.4, -1.82],
+      // 客廳沿圖面重排：沙發背向走道面窗、茶几在沙發與落地窗之間、層架靠左外牆、避免彼此重疊
+      "rug-meadow": [-1.8, -1.5], "sofa-cloud": [-1.7, -0.72], "table-pebble": [-1.8, -1.95], "chair-breeze": [-0.82, -2.3], "lamp-moon": [-2.72, -1.55], "plant-olive": [-2.83, -2.75], "shelf-cabin": [-2.97, -0.5],
+      "ikea-stoense": [-1.8, -1.5], "ikea-saltsjobaden": [-1.7, -0.72], "ikea-borgeby": [-1.8, -1.95], "ikea-ekenaset": [-0.82, -2.3], "ikea-lauters": [-2.72, -1.55], "ikea-fejka-fig": [-2.7, -2.75], "ikea-kallax": [-2.97, -0.5],
+    },
+    bonusPositions: {
+      "ikea-fejka-fig": [-0.85, 1.25], "ikea-borgeby": [-1.5, 1.3], "ikea-kallax": [2.45, -4.02], "ikea-lauters": [0.3, -3.55], "bed-soft": [1.55, -0.05],
     },
     candidateSpots: [[-2.45, 0.7], [-1.55, 0.7], [-2.45, -1.55], [-1.35, -1.55], [0.8, -0.7], [2.1, -0.7], [0.75, 0.65], [2.1, 0.65]],
-    mascotStart: [1.2, 0.42],
+    mascotStart: [-0.9, 2.6],
     cameraZoom: 57,
   },
   "bh7-a11": {
@@ -97,6 +102,9 @@ const runtimes: Record<FloorplanRuntime["floorplanId"], FloorplanRuntime> = {
     initialPositions: {
       "rug-meadow": [-2.78, 1.85], "sofa-cloud": [-3, 2.32], "table-pebble": [-2.72, 1.42], "chair-breeze": [-2.08, 2.18], "lamp-moon": [-3.79, 2.73], "plant-olive": [-3.74, 0.55], "shelf-cabin": [-2.7, 0.9],
       "ikea-stoense": [-2.78, 1.85], "ikea-saltsjobaden": [-3.18, 2.32], "ikea-borgeby": [-2.72, 1.42], "ikea-ekenaset": [-2.08, 2.18], "ikea-lauters": [-3.79, 2.73], "ikea-fejka-fig": [-3.74, 0.55], "ikea-kallax": [-2, 2.7],
+    },
+    bonusPositions: {
+      "ikea-fejka-fig": [0.7, 2.2], "ikea-borgeby": [-2.45, 1.2], "ikea-kallax": [2.6, 2.2], "ikea-lauters": [1.4, -2.2], "bed-soft": [1.9, -1.6],
     },
     candidateSpots: [[-3.4, 1.35], [-2.45, 1.2], [-3.55, 2.65], [-2.25, 2.7], [0.7, 2.2], [2.6, 2.2], [1.4, -2.2], [2.2, -2.15]],
     mascotStart: [-2.15, 0.78],

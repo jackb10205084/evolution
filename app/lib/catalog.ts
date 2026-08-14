@@ -365,8 +365,20 @@ export const ikeaDemoFurnitureIds = [
   "ikea-kallax",
 ];
 
+// 初始配置中側向（-90°）擺放的家具：計算佔地時寬深互換
+export const sideFacingFurnitureIds = ["shelf-cabin", "ikea-kallax"] as const;
+
+// 日光慢生活加碼配置：讓首屏就是佈置完成的家（聯盟商品置於餐廳與多功能室）
+export const sunnyBonusFurnitureIds = [
+  "ikea-fejka-fig",
+  "ikea-borgeby",
+  "ikea-kallax",
+  "ikea-lauters",
+  "bed-soft",
+] as const;
+
 export const themeFurnitureIds: Record<Exclude<ThemePreset["id"], "empty">, readonly string[]> = {
-  sunny: ownedInitialFurnitureIds,
+  sunny: [...ownedInitialFurnitureIds, ...sunnyBonusFurnitureIds],
   urban: ["rug-meadow", "sofa-cloud", "table-pebble", "chair-breeze", "lamp-moon", "shelf-cabin"],
   family: ["rug-meadow", "sofa-cloud", "table-pebble", "chair-breeze", "plant-olive", "shelf-cabin"],
   pet: ["rug-meadow", "sofa-cloud", "table-pebble", "chair-breeze", "plant-olive"],

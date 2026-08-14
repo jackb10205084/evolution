@@ -5,6 +5,10 @@ import { RoundedBox, useGLTF, useTexture } from "@react-three/drei";
 import { CuboidCollider, Physics, RigidBody } from "@react-three/rapier";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { OutlinePass } from "three/addons/postprocessing/OutlinePass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import type { EditorMode, FurnitureItem, SceneObjectV1 } from "../lib/domain";
 import { getFloorplanRuntime, resolveFloorplanPlacement, type FloorplanOpening, type FloorplanWallSegment } from "../lib/floorplan-runtime";
 import { getScenePresentation, type ScenePresentation, type SceneView } from "../lib/scene-presentation";
@@ -28,7 +32,7 @@ type Props = {
 };
 
 const roomPalette: Record<string, { wall: string; floor: string; accent: string; sky: string; sunlight: string }> = {
-  sunny: { wall: "#fff8ed", floor: "#f2ddc6", accent: "#a9c7a2", sky: "#cfe3ed", sunlight: "#fff0c9" },
+  sunny: { wall: "#fff8ed", floor: "#efe4d2", accent: "#a9c7a2", sky: "#cfe3ed", sunlight: "#fff0c9" },
   urban: { wall: "#f5f1ec", floor: "#d9cfbf", accent: "#b5bfd3", sky: "#d7e2eb", sunlight: "#f4e7d8" },
   family: { wall: "#fff3e7", floor: "#efd6c2", accent: "#a7c8d0", sky: "#d2e7ed", sunlight: "#ffe4ac" },
   pet: { wall: "#f4f7ec", floor: "#d9dfc9", accent: "#a6c69d", sky: "#d5e5df", sunlight: "#f7e9bd" },
@@ -70,9 +74,10 @@ export function ExperienceCanvas(props: Props) {
       onPointerMissed={() => props.onSelect(null)}
     >
       <color attach="background" args={[homePlayVisual.scene.background]} />
-      <ambientLight intensity={1.12} color="#fffdf8" />
-      <hemisphereLight args={["#fffdf8", "#d8d5cd", 0.52]} />
-      <directionalLight position={[7, 11, 8]} intensity={0.34} color="#fffaf2" />
+      <ambientLight intensity={0.6} color="#fffdf8" />
+      <hemisphereLight args={["#fff8ee", "#d4c8c0", 0.7]} />
+      <directionalLight position={[6.5, 10, 7.5]} intensity={0.92} color="#fff4e0" />
+      <directionalLight position={[-5, 5, -3]} intensity={0.28} color="#d7e4f0" />
 
       <Physics gravity={[0, -9.81, 0]} timeStep="vary">
         <FloorplanStage palette={palette} mode={props.mode} floorplanId={props.floorplanId} presentation={presentation} />
@@ -97,9 +102,79 @@ export function ExperienceCanvas(props: Props) {
           <MascotResident floorplanId={props.floorplanId} mode={props.mode} touchMove={props.touchMove} variant={props.avatarVariant} anchor={presentation.residentAnchor} />
         )}
       </Physics>
+      <WatercolorOutlineComposer selectedId={props.selectedId} />
       <CameraControls mode={props.mode} resetNonce={props.cameraResetNonce} presentation={presentation} />
     </Canvas>
   );
+}
+
+function WatercolorOutlineComposer({ selectedId }: { selectedId: string | null }) {
+  const { gl, scene, camera, size } = useThree();
+  const pipeline = useMemo(() => {
+    const composer = new EffectComposer(gl);
+    const renderPass = new RenderPass(scene, camera);
+    const roomOutline = new OutlinePass(new THREE.Vector2(1, 1), scene, camera);
+    roomOutline.visibleEdgeColor.set(homePlayVisual.scene.outline);
+    roomOutline.hiddenEdgeColor.set(homePlayVisual.scene.background);
+    roomOutline.edgeStrength = 0.34;
+    roomOutline.edgeGlow = 0;
+    roomOutline.edgeThickness = 0.4;
+    roomOutline.pulsePeriod = 0;
+
+    const objectOutline = new OutlinePass(new THREE.Vector2(1, 1), scene, camera);
+    objectOutline.visibleEdgeColor.set(homePlayVisual.scene.objectOutline);
+    objectOutline.hiddenEdgeColor.set(homePlayVisual.scene.background);
+    objectOutline.edgeStrength = 1.05;
+    objectOutline.edgeGlow = 0;
+    objectOutline.edgeThickness = 0.78;
+    objectOutline.pulsePeriod = 0;
+
+    const selectedOutline = new OutlinePass(new THREE.Vector2(1, 1), scene, camera);
+    selectedOutline.visibleEdgeColor.set(homePlayVisual.color.coral);
+    selectedOutline.hiddenEdgeColor.set(homePlayVisual.color.peach);
+    selectedOutline.edgeStrength = 1.65;
+    selectedOutline.edgeGlow = 0;
+    selectedOutline.edgeThickness = 0.95;
+    selectedOutline.pulsePeriod = 0;
+
+    composer.addPass(renderPass);
+    composer.addPass(roomOutline);
+    composer.addPass(objectOutline);
+    composer.addPass(selectedOutline);
+    composer.addPass(new OutputPass());
+    return { composer, roomOutline, objectOutline, selectedOutline };
+  }, [camera, gl, scene]);
+  const pipelineRef = useRef(pipeline);
+
+  useLayoutEffect(() => {
+    pipelineRef.current = pipeline;
+  }, [pipeline]);
+
+  useEffect(() => {
+    const current = pipelineRef.current;
+    current.composer.setPixelRatio(Math.min(gl.getPixelRatio(), 1.5));
+    current.composer.setSize(size.width, size.height);
+    current.roomOutline.setSize(size.width, size.height);
+    current.objectOutline.setSize(size.width, size.height);
+    current.selectedOutline.setSize(size.width, size.height);
+  }, [gl, size.height, size.width]);
+
+  useEffect(() => () => pipeline.composer.dispose(), [pipeline]);
+  useFrame(() => {
+    const current = pipelineRef.current;
+    const shell: THREE.Object3D[] = [];
+    const toys: THREE.Object3D[] = [];
+    scene.traverse((child) => {
+      if (child.name === "HP_SHELL") shell.push(child);
+      if (child.name.startsWith("HP_SCENE_ITEM__") || child.name === "HP_MASCOT") toys.push(child);
+    });
+    current.roomOutline.selectedObjects = shell.length ? shell : [scene];
+    current.objectOutline.selectedObjects = toys;
+    const selected = selectedId ? scene.getObjectByName(`HP_SCENE_ITEM__${selectedId}`) : null;
+    current.selectedOutline.selectedObjects = selected ? [selected] : [];
+    current.composer.render();
+  }, 1);
+  return null;
 }
 
 function CameraControls({ mode, resetNonce, presentation }: { mode: EditorMode; resetNonce: number; presentation: ScenePresentation }) {
@@ -138,7 +213,7 @@ function FloorplanStage({ palette, mode, floorplanId, presentation }: { palette:
   const runtime = getFloorplanRuntime(floorplanId) ?? getFloorplanRuntime("bh7-a6")!;
 
   return (
-    <group data-floorplan-id={floorplanId}>
+    <group name="HP_SHELL" data-floorplan-id={floorplanId}>
       <FloorplanColliders floorplanId={runtime.floorplanId} />
       {presentation.renderer === "audit" ? (
         <AuditFloorplan floorplanId={runtime.floorplanId} palette={palette} mode={mode} />
@@ -186,6 +261,64 @@ function PresentationFloorplan({ floorplanId, palette, mode }: { floorplanId: "b
       {walls.map((wall) => <ShellWall key={wall.id} wall={wall} wallColor={palette.wall} mode={mode} auditMode={false} />)}
       {openings.map((opening) => <ShellOpening key={opening.id} opening={opening} mode={mode} wallColor={palette.wall} skyColor={palette.sky} auditMode={false} />)}
       <FixedKitchen floorplanId={floorplanId} />
+      {mode === "decorate" && <WallDecor floorplanId={floorplanId} accent={palette.accent} />}
+    </group>
+  );
+}
+
+// 固定牆面裝飾：掛畫與時鐘（僅在佈置模式的高牆上顯示）
+function WallDecor({ floorplanId, accent }: { floorplanId: "bh7-a6" | "bh7-a11"; accent: string }) {
+  if (floorplanId !== "bh7-a6") return null;
+  const wallX = -3.24; // A6 左側外牆室內面
+  return (
+    <group>
+      {/* 拱形掛畫 */}
+      <group position={[wallX, 1.56, -2.15]} rotation={[0, Math.PI / 2, 0]}>
+        <RoundedBox args={[0.52, 0.68, 0.045]} radius={0.02} smoothness={3}>
+          <meshBasicMaterial color="#fffdf8" toneMapped={false} />
+        </RoundedBox>
+        <RoundedBox position={[0, -0.075, 0.006]} args={[0.3, 0.36, 0.045]} radius={0.018} smoothness={3}>
+          <meshBasicMaterial color={accent} toneMapped={false} />
+        </RoundedBox>
+        <mesh position={[0, 0.105, 0.006]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.15, 0.15, 0.045, 24, 1, false, 0, Math.PI]} />
+          <meshBasicMaterial color={accent} toneMapped={false} />
+        </mesh>
+      </group>
+      {/* 圓與山丘掛畫 */}
+      <group position={[wallX, 1.5, -1.6]} rotation={[0, Math.PI / 2, 0]}>
+        <RoundedBox args={[0.44, 0.56, 0.045]} radius={0.02} smoothness={3}>
+          <meshBasicMaterial color="#fffdf8" toneMapped={false} />
+        </RoundedBox>
+        <mesh position={[0, 0.08, 0.026]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.085, 0.085, 0.012, 24]} />
+          <meshBasicMaterial color={homePlayVisual.color.peach} toneMapped={false} />
+        </mesh>
+        <RoundedBox position={[0, -0.14, 0.026]} args={[0.3, 0.1, 0.012]} radius={0.045} smoothness={3}>
+          <meshBasicMaterial color="#d9c6a8" toneMapped={false} />
+        </RoundedBox>
+      </group>
+      {/* 掛鐘（層架上方） */}
+      <group position={[wallX, 1.82, -0.45]} rotation={[0, 0, Math.PI / 2]}>
+        <mesh>
+          <cylinderGeometry args={[0.17, 0.17, 0.04, 28]} />
+          <meshBasicMaterial color="#fffdf8" toneMapped={false} />
+        </mesh>
+        <mesh>
+          <cylinderGeometry args={[0.145, 0.145, 0.046, 28]} />
+          <meshBasicMaterial color="#fbf6ec" toneMapped={false} />
+        </mesh>
+      </group>
+      <group position={[wallX + 0.028, 1.82, -0.45]} rotation={[0, Math.PI / 2, 0]}>
+        <mesh position={[0, 0.045, 0]}>
+          <boxGeometry args={[0.016, 0.09, 0.008]} />
+          <meshBasicMaterial color={homePlayVisual.color.cocoa} toneMapped={false} />
+        </mesh>
+        <mesh position={[0.032, 0, 0]}>
+          <boxGeometry args={[0.064, 0.014, 0.008]} />
+          <meshBasicMaterial color={homePlayVisual.color.cocoa} toneMapped={false} />
+        </mesh>
+      </group>
     </group>
   );
 }
@@ -204,25 +337,38 @@ function BlueprintOverlay({ floorplanId }: { floorplanId: "bh7-a6" | "bh7-a11" }
 
 function FloorSlab({ footprint, floorColor, auditMode }: { footprint: readonly (readonly [number, number])[]; floorColor: string; auditMode: boolean }) {
   const floorEdge = `#${new THREE.Color(floorColor).lerp(new THREE.Color(homePlayVisual.color.blue), 0.18).getHexString()}`;
-  const geometry = useMemo(() => {
-    const shape = new THREE.Shape();
+  const shape = useMemo(() => {
+    const result = new THREE.Shape();
     footprint.forEach(([x, z], index) => {
-      if (index === 0) shape.moveTo(x, -z);
-      else shape.lineTo(x, -z);
+      if (index === 0) result.moveTo(x, -z);
+      else result.lineTo(x, -z);
     });
-    shape.closePath();
-    const result = new THREE.ExtrudeGeometry(shape, { depth: 0.18, bevelEnabled: false, curveSegments: 2 });
-    result.computeVertexNormals();
+    result.closePath();
     return result;
   }, [footprint]);
 
+  const geometry = useMemo(() => {
+    const result = new THREE.ExtrudeGeometry(shape, { depth: 0.18, bevelEnabled: false, curveSegments: 2 });
+    result.computeVertexNormals();
+    return result;
+  }, [shape]);
+
+  const topGeometry = useMemo(() => new THREE.ShapeGeometry(shape), [shape]);
+  const plankTexture = usePlankTexture(floorColor);
+
   useEffect(() => () => geometry.dispose(), [geometry]);
+  useEffect(() => () => topGeometry.dispose(), [topGeometry]);
 
   return (
     <group>
       <mesh geometry={geometry} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.18, 0]}>
         <meshBasicMaterial color={floorColor} toneMapped={false} transparent={auditMode} opacity={auditMode ? 0.46 : 1} />
       </mesh>
+      {!auditMode && (
+        <mesh geometry={topGeometry} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
+          <meshBasicMaterial map={plankTexture} toneMapped={false} />
+        </mesh>
+      )}
       <mesh geometry={geometry} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.24, 0]} scale={[1.012, 1.012, 1]}>
         <meshBasicMaterial color={floorEdge} toneMapped={false} />
       </mesh>
@@ -230,19 +376,71 @@ function FloorSlab({ footprint, floorColor, auditMode }: { footprint: readonly (
   );
 }
 
+// 平塗式拼板地板：純色階、無照片木紋，符合 v2 視覺契約
+function usePlankTexture(floorColor: string) {
+  return useMemo(() => {
+    const tileMeters = 1.28;
+    const size = 256;
+    const plankRows = 8;
+    const rowHeight = size / plankRows;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const context = canvas.getContext("2d")!;
+    const base = new THREE.Color(floorColor);
+    const tints = [
+      `#${base.clone().getHexString()}`,
+      `#${base.clone().lerp(new THREE.Color("#ffffff"), 0.05).getHexString()}`,
+      `#${base.clone().lerp(new THREE.Color("#a98d6d"), 0.06).getHexString()}`,
+    ];
+    const seam = `#${base.clone().lerp(new THREE.Color("#8a7460"), 0.26).getHexString()}`;
+    for (let row = 0; row < plankRows; row += 1) {
+      const y = row * rowHeight;
+      const offset = (row % 2) * (size / 2);
+      for (let column = -1; column < 2; column += 1) {
+        const x = column * size + offset;
+        context.fillStyle = tints[(row * 3 + column + 6) % 3];
+        context.fillRect(x, y, size, rowHeight);
+        context.fillStyle = seam;
+        context.globalAlpha = 0.42;
+        context.fillRect(x, y, 1.6, rowHeight);
+        context.globalAlpha = 1;
+      }
+      context.fillStyle = seam;
+      context.globalAlpha = 0.5;
+      context.fillRect(0, y, size, 1.4);
+      context.globalAlpha = 1;
+    }
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(1 / tileMeters, 1 / tileMeters);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 4;
+    return texture;
+  }, [floorColor]);
+}
+
 function ShellWall({ wall, wallColor, mode, auditMode }: { wall: FloorplanWallSegment; wallColor: string; mode: EditorMode; auditMode: boolean }) {
   const color = wall.kind === "window" ? "#e1edf0" : wall.kind === "partition" ? "#fff2e6" : wallColor;
-  const cutawayHeight = mode === "decorate" ? (wall.kind === "partition" ? 0.4 : 0.3) : (wall.kind === "partition" ? 0.38 : 0.3);
   const displayHeight = auditMode
     ? 0.2
     : wall.view === "full"
-      ? (mode === "decorate" ? 1.22 : Math.min(wall.height, 1.9))
-      : Math.min(wall.height, cutawayHeight);
+      ? (mode === "decorate" ? 2.06 : Math.min(wall.height, 2.2))
+      : mode === "decorate"
+        ? (wall.kind === "partition" ? 0.94 : 0.9)
+        : (wall.kind === "partition" ? 0.38 : 0.3);
+  const showBaseboard = !auditMode && displayHeight > 0.5;
   return (
     <group position={[wall.center[0], 0, wall.center[1]]} rotation={[0, wall.rotationY ?? 0, 0]}>
       <RoundedBox position={[0, displayHeight / 2, 0]} args={[wall.size[0], displayHeight, wall.size[1]]} radius={0.045} smoothness={4}>
         <meshBasicMaterial color={color} toneMapped={false} />
       </RoundedBox>
+      {showBaseboard && (
+        <RoundedBox position={[0, 0.055, 0]} args={[wall.size[0] + 0.018, 0.11, wall.size[1] + 0.03]} radius={0.018} smoothness={3}>
+          <meshBasicMaterial color="#eee1cd" toneMapped={false} />
+        </RoundedBox>
+      )}
       <RoundedBox position={[0, displayHeight + 0.025, 0]} args={[wall.size[0] + 0.025, 0.05, wall.size[1] + 0.025]} radius={0.024} smoothness={3}>
         <meshBasicMaterial color={auditMode ? homePlayVisual.color.blueLine : "#d1ddec"} toneMapped={false} />
       </RoundedBox>
@@ -252,18 +450,19 @@ function ShellWall({ wall, wallColor, mode, auditMode }: { wall: FloorplanWallSe
 
 function ShellOpening({ opening, mode, wallColor, skyColor, auditMode }: { opening: FloorplanOpening; mode: EditorMode; wallColor: string; skyColor: string; auditMode: boolean }) {
   if (opening.type === "door") {
-    const doorHeight = auditMode ? 0.18 : mode === "decorate" ? 0.7 : Math.min(opening.height, 2.1);
+    // 門扇高度跟隨剖牆高度，避免在低牆上出現懸空的整片門板（散步模式破圖主因）
+    const doorHeight = auditMode ? 0.18 : mode === "decorate" ? 0.7 : 0.68;
     return (
       <group position={[opening.center[0], 0, opening.center[1]]} rotation={[0, opening.rotationY, 0]}>
         <RoundedBox position={[0, 0.025, 0]} args={[opening.width, 0.05, opening.wallThickness + 0.035]} radius={0.018} smoothness={3}>
           <meshBasicMaterial color="#f5c7ab" toneMapped={false} />
         </RoundedBox>
         {!auditMode && (
-          <group position={[-opening.width / 2, 0, 0]} rotation={[0, -0.78, 0]}>
+          <group position={[-opening.width / 2, 0, 0]} rotation={[0, -0.52, 0]}>
             <RoundedBox position={[opening.width / 2, doorHeight / 2, 0]} args={[opening.width, doorHeight, 0.055]} radius={0.035} smoothness={4}>
               <meshToonMaterial color="#f5cfaa" gradientMap={toonGradient} toneMapped={false} />
             </RoundedBox>
-            <mesh position={[opening.width * 0.83, doorHeight * 0.56, 0.045]}>
+            <mesh position={[opening.width * 0.83, doorHeight * 0.74, 0.045]}>
               <sphereGeometry args={[0.035, 12, 8]} />
               <meshBasicMaterial color="#b78768" />
             </mesh>
@@ -273,20 +472,68 @@ function ShellOpening({ opening, mode, wallColor, skyColor, auditMode }: { openi
     );
   }
 
-  const visibleHeight = auditMode ? 0.18 : mode === "decorate" ? Math.min(opening.height, 1.05) : opening.height;
+  const visibleHeight = auditMode ? 0.18 : Math.min(opening.height, mode === "decorate" ? 1.96 : 2.08);
   const sill = auditMode ? 0.02 : opening.sill;
+  const glassWidth = Math.max(0.18, opening.width - 0.06);
+  const glassHeight = Math.max(0.12, visibleHeight - 0.06);
+  const panelCount = Math.max(2, Math.round(opening.width / 0.78));
+  const isWideGlass = !auditMode && opening.type === "sliding-door" && opening.width > 1.4;
   return (
     <group position={[opening.center[0], 0, opening.center[1]]} rotation={[0, opening.rotationY, 0]}>
       {sill > 0.06 && <RoundedBox position={[0, sill / 2, 0]} args={[opening.width, sill, opening.wallThickness]} radius={0.035} smoothness={4}>
         <meshBasicMaterial color={wallColor} toneMapped={false} />
       </RoundedBox>}
-      <RoundedBox position={[0, sill + visibleHeight / 2, 0]} args={[Math.max(0.18, opening.width - 0.06), Math.max(0.12, visibleHeight - 0.06), 0.035]} radius={0.03} smoothness={3}>
-        <meshBasicMaterial color={skyColor} transparent opacity={0.58} />
+      {/* 白色外框 */}
+      {!auditMode && (
+        <RoundedBox position={[0, sill + visibleHeight / 2, -0.006]} args={[opening.width + 0.06, visibleHeight + 0.05, 0.028]} radius={0.02} smoothness={3}>
+          <meshBasicMaterial color="#fffdf8" toneMapped={false} />
+        </RoundedBox>
+      )}
+      {/* 玻璃（天空） */}
+      <RoundedBox position={[0, sill + visibleHeight / 2, 0]} args={[glassWidth, glassHeight, 0.035]} radius={0.03} smoothness={3}>
+        <meshBasicMaterial color={skyColor} transparent opacity={0.6} />
       </RoundedBox>
-      <mesh position={[0, sill + visibleHeight / 2, 0.035]}>
-        <boxGeometry args={[0.04, Math.max(0.1, visibleHeight - 0.08), 0.04]} />
-        <meshBasicMaterial color="#fffdf8" />
-      </mesh>
+      {/* 窗外遠景綠意（置於玻璃後方，避免共面閃爍） */}
+      {!auditMode && (
+        <RoundedBox position={[0, sill + glassHeight * 0.2, -0.012]} args={[glassWidth - 0.05, Math.max(0.1, glassHeight * 0.32), 0.026]} radius={0.024} smoothness={3}>
+          <meshBasicMaterial color="#cddec7" transparent opacity={0.75} />
+        </RoundedBox>
+      )}
+      {/* 窗櫺 */}
+      {Array.from({ length: panelCount - 1 }, (_, index) => {
+        const x = -opening.width / 2 + (opening.width / panelCount) * (index + 1);
+        return (
+          <mesh key={`mullion-${index}`} position={[x, sill + visibleHeight / 2, 0.03]}>
+            <boxGeometry args={[0.045, Math.max(0.1, visibleHeight - 0.05), 0.05]} />
+            <meshBasicMaterial color="#fffdf8" toneMapped={false} />
+          </mesh>
+        );
+      })}
+      {!auditMode && visibleHeight > 1.2 && (
+        <mesh position={[0, sill + visibleHeight * 0.72, 0.03]}>
+          <boxGeometry args={[Math.max(0.1, opening.width - 0.04), 0.045, 0.05]} />
+          <meshBasicMaterial color="#fffdf8" toneMapped={false} />
+        </mesh>
+      )}
+      {/* 窗簾（大面落地窗，室內側） */}
+      {isWideGlass && (
+        <group position={[0, 0, opening.wallThickness / 2 + 0.1]}>
+          <mesh position={[0, sill + visibleHeight + 0.1, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.022, 0.022, opening.width + 0.34, 10]} />
+            <meshBasicMaterial color="#c9a37a" toneMapped={false} />
+          </mesh>
+          {[-1, 1].map((side) => (
+            <group key={`curtain-${side}`} position={[side * (opening.width / 2 - 0.17), 0, 0]}>
+              <RoundedBox position={[0, sill + visibleHeight / 2 + 0.02, 0]} args={[0.4, visibleHeight + 0.02, 0.13]} radius={0.055} smoothness={4}>
+                <meshToonMaterial color="#fbf8f1" gradientMap={toonGradient} toneMapped={false} />
+              </RoundedBox>
+              <RoundedBox position={[side * 0.08, sill + visibleHeight * 0.52, 0.015]} args={[0.22, visibleHeight * 0.86, 0.125]} radius={0.05} smoothness={4}>
+                <meshToonMaterial color="#f1ece1" gradientMap={toonGradient} toneMapped={false} />
+              </RoundedBox>
+            </group>
+          ))}
+        </group>
+      )}
       <RoundedBox position={[0, sill + visibleHeight + 0.02, 0]} args={[opening.width + 0.02, 0.065, opening.wallThickness + 0.02]} radius={0.025} smoothness={3}>
         <meshBasicMaterial color={homePlayVisual.color.blueLine} />
       </RoundedBox>
@@ -299,18 +546,107 @@ function FixedKitchen({ floorplanId }: { floorplanId: "bh7-a6" | "bh7-a11" }) {
   const rotation: [number, number, number] = floorplanId === "bh7-a11" ? [0, Math.PI / 2, 0] : [0, 0, 0];
   return (
     <group position={position} rotation={rotation}>
-      <RoundedBox position={[0, 0.42, 0]} args={[0.52, 0.84, 2.2]} radius={0.07} smoothness={4}>
-        <meshToonMaterial color="#fff4df" gradientMap={toonGradient} toneMapped={false} />
+      {/* 固定廚具碰撞體：散步模式不可穿越 */}
+      <RigidBody type="fixed" colliders={false}>
+        <CuboidCollider args={[0.34, 0.5, 1.2]} position={[0.02, 0.5, 0]} />
+        <CuboidCollider args={[0.33, 0.9, 0.34]} position={[0, 0.9, -1.52]} />
+      </RigidBody>
+      {/* 下櫃本體與踢腳（白門板，參考樣品屋） */}
+      <RoundedBox position={[0, 0.46, 0]} args={[0.58, 0.78, 2.3]} radius={0.05} smoothness={4}>
+        <meshToonMaterial color="#f6f2ea" gradientMap={toonGradient} toneMapped={false} />
       </RoundedBox>
-      <RoundedBox position={[0.03, 0.88, 0]} args={[0.58, 0.08, 2.25]} radius={0.035} smoothness={3}>
-        <meshToonMaterial color="#efc9ac" gradientMap={toonGradient} toneMapped={false} />
+      <RoundedBox position={[0.01, 0.06, 0]} args={[0.54, 0.12, 2.24]} radius={0.03} smoothness={3}>
+        <meshBasicMaterial color="#ddd6ca" toneMapped={false} />
       </RoundedBox>
-      {[-0.72, 0, 0.72].map((z) => (
-        <mesh key={z} position={[0.305, 0.43, z]}>
-          <boxGeometry args={[0.018, 0.65, 0.02]} />
-          <meshBasicMaterial color="#dfb8a0" />
+      {/* 灰色石英檯面 */}
+      <RoundedBox position={[0.03, 0.88, 0]} args={[0.66, 0.07, 2.4]} radius={0.032} smoothness={4}>
+        <meshToonMaterial color="#b6b1a8" gradientMap={toonGradient} toneMapped={false} />
+      </RoundedBox>
+      {/* 白色門板與橫向把手 */}
+      {[-0.76, 0, 0.76].map((z) => (
+        <group key={`door-${z}`}>
+          <RoundedBox position={[0.3, 0.45, z]} args={[0.025, 0.6, 0.62]} radius={0.012} smoothness={3}>
+            <meshToonMaterial color="#fbf8f2" gradientMap={toonGradient} toneMapped={false} />
+          </RoundedBox>
+          <RoundedBox position={[0.325, 0.66, z]} args={[0.022, 0.035, 0.24]} radius={0.01} smoothness={3}>
+            <meshBasicMaterial color="#b9c2cb" toneMapped={false} />
+          </RoundedBox>
+        </group>
+      ))}
+      {/* 水槽與龍頭 */}
+      <RoundedBox position={[0.05, 0.918, -0.62]} args={[0.42, 0.028, 0.52]} radius={0.014} smoothness={3}>
+        <meshBasicMaterial color="#dde6ea" toneMapped={false} />
+      </RoundedBox>
+      <mesh position={[-0.17, 1.0, -0.62]}>
+        <cylinderGeometry args={[0.021, 0.026, 0.2, 12]} />
+        <meshBasicMaterial color="#9fb4c4" toneMapped={false} />
+      </mesh>
+      <mesh position={[-0.1, 1.09, -0.62]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.018, 0.018, 0.17, 10]} />
+        <meshBasicMaterial color="#9fb4c4" toneMapped={false} />
+      </mesh>
+      {/* 黑色玻璃爐台（IH 爐） */}
+      <RoundedBox position={[0.05, 0.918, 0.62]} args={[0.44, 0.024, 0.56]} radius={0.014} smoothness={3}>
+        <meshBasicMaterial color="#7c766f" toneMapped={false} />
+      </RoundedBox>
+      {[0.44, 0.8].map((z) => (
+        <mesh key={`burner-${z}`} position={[0.05, 0.936, z]}>
+          <cylinderGeometry args={[0.085, 0.085, 0.014, 24]} />
+          <meshBasicMaterial color="#655854" toneMapped={false} />
         </mesh>
       ))}
+      {/* 抽油煙機（煙囪型，參考樣品屋） */}
+      <RoundedBox position={[-0.02, 1.62, 0.62]} args={[0.5, 0.09, 0.6]} radius={0.02} smoothness={3}>
+        <meshToonMaterial color="#ccd3d9" gradientMap={toonGradient} toneMapped={false} />
+      </RoundedBox>
+      <RoundedBox position={[-0.1, 1.95, 0.62]} args={[0.26, 0.58, 0.3]} radius={0.02} smoothness={3}>
+        <meshToonMaterial color="#d6dce1" gradientMap={toonGradient} toneMapped={false} />
+      </RoundedBox>
+      {/* 檯面小物：陶鍋與砧板 */}
+      <mesh position={[0.05, 0.95, 0.08]}>
+        <cylinderGeometry args={[0.085, 0.095, 0.09, 20]} />
+        <meshToonMaterial color="#df8f78" gradientMap={toonGradient} toneMapped={false} />
+      </mesh>
+      <mesh position={[0.05, 1.0, 0.08]}>
+        <sphereGeometry args={[0.088, 20, 12]} />
+        <meshToonMaterial color="#e8a58d" gradientMap={toonGradient} toneMapped={false} />
+      </mesh>
+      <RoundedBox position={[0.04, 0.93, -0.24]} args={[0.3, 0.02, 0.2]} radius={0.01} smoothness={3} rotation={[0, 0.2, 0]}>
+        <meshToonMaterial color="#d9b58c" gradientMap={toonGradient} toneMapped={false} />
+      </RoundedBox>
+      {/* 淺灰背牆板 */}
+      <RoundedBox position={[-0.275, 1.2, 0]} args={[0.03, 0.58, 2.3]} radius={0.014} smoothness={3}>
+        <meshBasicMaterial color="#eceeed" toneMapped={false} />
+      </RoundedBox>
+      {/* 白色吊櫃＋上方木質收邊 */}
+      <RoundedBox position={[-0.13, 1.76, -0.35]} args={[0.34, 0.56, 1.35]} radius={0.04} smoothness={4}>
+        <meshToonMaterial color="#f6f2ea" gradientMap={toonGradient} toneMapped={false} />
+      </RoundedBox>
+      {[-0.86, -0.42, 0.02].map((z) => (
+        <RoundedBox key={`upper-door-${z}`} position={[0.045, 1.76, z + 0.28]} args={[0.02, 0.5, 0.42]} radius={0.01} smoothness={3}>
+          <meshToonMaterial color="#fbf8f2" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+      ))}
+      <RoundedBox position={[-0.1, 2.12, -0.35]} args={[0.42, 0.16, 1.44]} radius={0.03} smoothness={3}>
+        <meshToonMaterial color="#dcb98e" gradientMap={toonGradient} toneMapped={false} />
+      </RoundedBox>
+      {/* 奶油色復古冰箱（圓角＋鍍鉻把手，參考樣品屋 MESO 風格但不用品牌） */}
+      <group position={[0, 0, -1.52]}>
+        <RoundedBox position={[0, 0.9, 0]} args={[0.64, 1.78, 0.66]} radius={0.12} smoothness={5}>
+          <meshToonMaterial color="#f4eee1" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+        <mesh position={[0.31, 1.26, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <boxGeometry args={[0.014, 0.014, 0.6]} />
+          <meshBasicMaterial color="#e3dccb" toneMapped={false} />
+        </mesh>
+        {[1.44, 0.98].map((y) => (
+          <group key={`fridge-handle-${y}`}>
+            <RoundedBox position={[0.33, y, 0.18]} args={[0.035, 0.2, 0.045]} radius={0.016} smoothness={3}>
+              <meshBasicMaterial color="#c4ccd3" toneMapped={false} />
+            </RoundedBox>
+          </group>
+        ))}
+      </group>
     </group>
   );
 }
@@ -396,7 +732,9 @@ function Furniture({
         onPointerUp={pointerUp}
         onPointerCancel={pointerUp}
       >
-        <FurnitureModel product={product} variant={sceneItem.materialVariant} selected={selected} />
+        <group name={`HP_SCENE_ITEM__${sceneItem.id}`}>
+          <FurnitureModel product={product} variant={sceneItem.materialVariant} selected={selected} />
+        </group>
         {selected && <SelectionFootprint width={product.size.width} depth={product.size.depth} />}
       </group>
     </RigidBody>
@@ -423,7 +761,7 @@ function FurnitureModel({ product, variant, selected }: { product: FurnitureItem
   return <primitive object={asset} />;
 }
 
-function cloneAsToon(sourceScene: THREE.Group, resolveColor: (role: string, source: string) => string, selected: boolean, withOutline = true, flat = false) {
+function cloneAsToon(sourceScene: THREE.Group, resolveColor: (role: string, source: string) => string, selected: boolean, flat = false) {
   const clone = sourceScene.clone(true);
   const meshes: THREE.Mesh[] = [];
   clone.traverse((child) => { if (child instanceof THREE.Mesh) meshes.push(child); });
@@ -435,23 +773,14 @@ function cloneAsToon(sourceScene: THREE.Group, resolveColor: (role: string, sour
     const displayColor = new THREE.Color(color).lerp(new THREE.Color("#fff8ef"), selected ? 0.06 : 0);
     child.material = flat
       ? new THREE.MeshBasicMaterial({ color: displayColor, toneMapped: false })
-      : new THREE.MeshToonMaterial({ color: displayColor, gradientMap: toonGradient, toneMapped: false });
-    if (withOutline && !["eyeHighlight", "cheek"].includes(role)) {
-      const outlineColor = ["eye", "mouth"].includes(role) ? homePlayVisual.color.cocoa : homePlayVisual.scene.outline;
-      const silhouette = new THREE.Mesh(
-        child.geometry,
-        new THREE.MeshBasicMaterial({ color: outlineColor, side: THREE.BackSide, transparent: true, opacity: homePlayVisual.scene.outlineOpacity, depthWrite: false, toneMapped: false }),
-      );
-      silhouette.scale.setScalar(1.028);
-      silhouette.renderOrder = 0;
-      child.add(silhouette);
-      const seamLines = new THREE.LineSegments(
-        new THREE.EdgesGeometry(child.geometry, 38),
-        new THREE.LineBasicMaterial({ color: outlineColor, transparent: true, opacity: selected ? 0.34 : homePlayVisual.scene.seamOpacity, depthWrite: false, toneMapped: false }),
-      );
-      seamLines.renderOrder = 2;
-      child.add(seamLines);
-    }
+      : new THREE.MeshToonMaterial({
+          color: displayColor,
+          gradientMap: toonGradient,
+          toneMapped: false,
+          emissive: displayColor,
+          emissiveIntensity: 0,
+        });
+    child.userData.homeplayToonSurface = true;
   });
   return clone;
 }
@@ -484,7 +813,7 @@ function MascotResident({ floorplanId, mode, touchMove, variant, anchor }: { flo
   const pouchColors = ["#e07c62", "#6ea697", "#7389ba", "#d19a4f", "#8f75a8", "#53766a"];
   const pouch = pouchColors[variant % pouchColors.length];
   const { scene } = useGLTF(mascotAssetPath);
-  const mascot = useMemo(() => cloneAsToon(scene, (role, source) => role === "pouch" ? pouch : source, false, true, true), [pouch, scene]);
+  const mascot = useMemo(() => cloneAsToon(scene, (role, source) => role === "pouch" ? pouch : source, false), [pouch, scene]);
 
   useEffect(() => {
     const down = (event: KeyboardEvent) => { keys.current[event.key.toLowerCase()] = true; };
@@ -541,7 +870,9 @@ function MascotResident({ floorplanId, mode, touchMove, variant, anchor }: { flo
         <circleGeometry args={[0.5, 32]} />
         <meshBasicMaterial color="#cfb7ac" transparent opacity={0.1} depthWrite={false} toneMapped={false} />
       </mesh>
-      <primitive object={mascot} />
+      <group name="HP_MASCOT">
+        <primitive object={mascot} />
+      </group>
     </group>
   );
 }
@@ -551,10 +882,21 @@ function quaternionToY(q: { x: number; y: number; z: number; w: number }) {
 }
 
 function createToonGradient() {
-  const gradient = new THREE.DataTexture(Uint8Array.from([206, 234, 255]), 3, 1, THREE.RedFormat);
+  const gradient = new THREE.DataTexture(
+    Uint8Array.from([
+      176, 168, 180, 255,
+      214, 198, 188, 255,
+      242, 228, 212, 255,
+      255, 250, 244, 255,
+    ]),
+    4,
+    1,
+    THREE.RGBAFormat,
+  );
   gradient.magFilter = THREE.NearestFilter;
   gradient.minFilter = THREE.NearestFilter;
   gradient.generateMipmaps = false;
+  if ("NoColorSpace" in THREE) gradient.colorSpace = THREE.NoColorSpace;
   gradient.needsUpdate = true;
   return gradient;
 }

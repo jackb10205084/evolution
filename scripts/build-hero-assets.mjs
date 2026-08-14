@@ -250,6 +250,13 @@ await writeFile(
     units: "meter",
     upAxis: "Y",
     generatedBy: "HomePlay deterministic GLB builder",
+    pipeline: {
+      optimizer: "@gltf-transform/cli",
+      compression: "meshopt",
+      validator: "Khronos glTF Validator",
+      preservesNamedMaterials: true,
+      simplifiesGeometry: false,
+    },
     assets: assets.map(({ file }) => file),
   }, null, 2),
 );

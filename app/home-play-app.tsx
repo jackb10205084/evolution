@@ -61,7 +61,7 @@ import {
   saveDesign as saveDesignApi,
 } from "./lib/api-client";
 import type { BookingSession, RenderJobRecord } from "./lib/api-client";
-import { catalog, floorplans, ikeaDemoFurnitureIds, themeFurnitureIds, themes } from "./lib/catalog";
+import { catalog, floorplans, ikeaDemoFurnitureIds, sideFacingFurnitureIds, themeFurnitureIds, themes } from "./lib/catalog";
 import { commercialPilot, commercialPilotProgress } from "./lib/commercial-pilot";
 import type {
   BookingDraft,
@@ -883,10 +883,11 @@ function buildInitialScene(floorplanId: string, themeId: string): SceneObjectV1[
 function buildSceneFromIds(floorplanId: string, themeId: string, furnitureIds: readonly string[]): SceneObjectV1[] {
   const runtime = getFloorplanRuntime(floorplanId) ?? getFloorplanRuntime("bh7-a6")!;
   const materialVariant = { sunny: 0, urban: 1, family: 2, pet: 3 }[themeId] ?? 0;
+  const mixedLayout = furnitureIds.includes("sofa-cloud");
   return furnitureIds.map((id) => {
     const product = catalog.find((entry) => entry.id === id)!;
-    const position = runtime.initialPositions[id];
-    const initialAngle = ["shelf-cabin", "ikea-kallax"].includes(id) ? -Math.PI / 2 : ["sofa-cloud", "chair-breeze", "ikea-saltsjobaden", "ikea-ekenaset"].includes(id) ? Math.PI : 0;
+    const position = (mixedLayout && runtime.bonusPositions[id]) || runtime.initialPositions[id];
+    const initialAngle = (sideFacingFurnitureIds as readonly string[]).includes(id) ? -Math.PI / 2 : ["sofa-cloud", "chair-breeze", "ikea-saltsjobaden", "ikea-ekenaset", "bed-soft"].includes(id) ? Math.PI : 0;
     return { id: `scene-${id}`, sku: product.sku, assetVersion: product.assetVersion, position: { x: position[0], y: 0, z: position[1] }, rotation: quaternionFromY(initialAngle), materialVariant };
   });
 }

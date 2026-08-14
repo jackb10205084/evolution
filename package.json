@@ -13,8 +13,16 @@
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
     "test": "npm run assets:validate && npm run floorplans:validate && npm run pilot:audit && npm run build && node --test tests/*.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "assets:build": "node scripts/build-hero-assets.mjs",
+    "assets:build": "node scripts/build-hero-assets.mjs && npm run assets:optimize",
+    "assets:optimize": "node scripts/optimize-hero-assets.mjs",
     "assets:validate": "node scripts/validate-hero-assets.mjs",
+    "blender:pilot:spec": "node --import tsx scripts/blender/export-a6-painterly-spec.ts",
+    "blender:pilot:build": "node scripts/blender/run-painterly-pilot.mjs",
+    "blender:pilot:validate": "node scripts/blender/validate-painterly-pilot.mjs",
+    "blender:watercolor:v2": "node scripts/blender/run-watercolor-pipeline-v2.mjs",
+    "blender:watercolor:v2:reuse": "node scripts/blender/run-watercolor-pipeline-v2.mjs --reuse-base",
+    "blender:watercolor:v2:validate": "node scripts/blender/validate-watercolor-pipeline-v2.mjs",
+    "blender:watercolor:v2:composites:validate": "node scripts/blender/validate-watercolor-composites-v2.mjs",
     "floorplans:validate": "node scripts/validate-floorplan-runtime.mjs",
     "pilot:audit": "node scripts/audit-commercial-pilot.mjs",
     "pilot:release": "node scripts/audit-commercial-pilot.mjs --release",
@@ -35,6 +43,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.37.1",
     "@cloudflare/workers-types": "^4.20260702.1",
+    "@gltf-transform/cli": "^4.4.2",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
@@ -44,6 +53,7 @@
     "drizzle-kit": "0.31.10",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
+    "gltf-validator": "^2.0.0-dev.3.10",
     "miniflare": "^4.20260515.0",
     "react-server-dom-webpack": "19.2.6",
     "tailwindcss": "4.2.1",
@@ -54,6 +64,9 @@
   },
   "type": "module",
   "overrides": {
+    "nanoid": "3.3.17",
+    "postcss": "8.5.25",
+    "sharp": "0.35.3",
     "next": {
       "postcss": "8.5.25",
       "sharp": "0.35.3"

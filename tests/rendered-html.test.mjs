@@ -132,7 +132,12 @@ test("keeps all 3D assets on the approved deterministic V2 contract", async () =
   assert.equal(manifest.version, 2);
   assert.equal(manifest.visualContractVersion, "v2-original-cozy");
   assert.equal(manifest.style, "high-key-pastel-dollhouse");
+  assert.equal(manifest.pipeline.optimizer, "@gltf-transform/cli");
+  assert.equal(manifest.pipeline.compression, "meshopt");
+  assert.equal(manifest.pipeline.simplifiesGeometry, false);
   assert.ok(manifest.assets.includes("mascot-resident.glb"));
   assert.match(packageJson, /assets:validate/);
+  assert.match(packageJson, /assets:optimize/);
   await access(new URL("../scripts/validate-hero-assets.mjs", import.meta.url));
+  await access(new URL("../scripts/optimize-hero-assets.mjs", import.meta.url));
 });
