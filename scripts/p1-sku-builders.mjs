@@ -174,17 +174,17 @@ function buildSofa(add) {
   const width = mm(1560);
   const depth = mm(840);
   const height = mm(720);
-  const arm = 0.145;
-  const back = 0.155;
-  const legH = 0.15;
-  const railH = 0.016;
-  const railY = legH;
-  const shellBottom = legH + railH * 0.35;
+  const arm = 0.152;
+  const back = 0.168;
+  const legH = 0.132;
+  const railH = 0.012;
+  const shellBottom = legH + 0.006;
   const shellH = height - shellBottom;
   const hw = width / 2;
   const hd = depth / 2;
-  const pill = 0.068;
+  const pill = 0.082;
 
+  // Wraparound tub: one U-shell, arms run to the front, back is continuous.
   const shell = roundedPolygon(
     [
       [-hw, -hd],
@@ -196,93 +196,96 @@ function buildSofa(add) {
       [-hw + arm, hd - back],
       [-hw + arm, -hd],
     ],
-    [pill, 0.04, 0.04, pill, pill * 0.7, 0.04, 0.04, pill * 0.7],
+    [pill, 0.055, 0.055, pill, pill * 0.75, 0.05, 0.05, pill * 0.75],
   );
-  const shellGeom = extrudeVertical(shell, shellH, 0.012);
-  add(shellGeom, "primary", [0, shellBottom, 0]);
+  add(extrudeVertical(shell, shellH, 0.016), "primary", [0, shellBottom, 0]);
+  // Paper-white highlight along the top rim of the tub.
+  add(softBox(width - 0.04, 0.018, 0.06, 0.008, 3), "cream", [0, height - 0.012, hd - 0.03]);
+  add(softBox(0.06, 0.018, depth - 0.08, 0.008, 3), "cream", [-hw + 0.03, height - 0.012, 0]);
+  add(softBox(0.06, 0.018, depth - 0.08, 0.008, 3), "cream", [hw - 0.03, height - 0.012, 0]);
 
-  const cushionW = width - arm * 2 - 0.012;
-  const cushionD = depth - back - 0.02;
-  const cushionH = 0.175;
+  const cushionW = width - arm * 2 - 0.01;
+  const cushionD = depth - back - 0.018;
+  const cushionH = 0.198;
   add(
-    softBox(cushionW, cushionH, cushionD, 0.055, 6),
+    softBox(cushionW, cushionH, cushionD, 0.062, 7),
     "cream",
-    [0, shellBottom + cushionH * 0.52, -back * 0.28],
+    [0, shellBottom + cushionH * 0.48, -back * 0.3],
   );
 
-  const leg = 0.018;
-  const insetX = hw - 0.07;
-  const insetZ = hd - 0.08;
+  const leg = 0.016;
+  const insetX = hw - 0.068;
+  const insetZ = hd - 0.072;
   for (const x of [-insetX, insetX]) {
     for (const z of [-insetZ, insetZ]) {
-      add(softBox(leg, legH, leg, 0.002, 2), "legs", [x, legH / 2, z]);
-      add(softBox(0.028, 0.012, 0.012, 0.002, 2), "legs", [x + Math.sign(x) * -0.012, railY + 0.004, z]);
+      add(softBox(leg, legH, leg, 0.0015, 2), "legs", [x, legH / 2, z]);
     }
   }
-  add(softBox(width - 0.16, railH, 0.014, 0.003, 2), "legs", [0, railY, -insetZ]);
-  add(softBox(width - 0.16, railH, 0.014, 0.003, 2), "legs", [0, railY, insetZ]);
-  add(softBox(0.014, railH, depth - 0.18, 0.003, 2), "legs", [-insetX, railY, 0]);
-  add(softBox(0.014, railH, depth - 0.18, 0.003, 2), "legs", [insetX, railY, 0]);
+  add(softBox(width - 0.15, railH, 0.012, 0.002, 2), "legs", [0, railH * 0.5 + legH - 0.002, -insetZ]);
+  add(softBox(width - 0.15, railH, 0.012, 0.002, 2), "legs", [0, railH * 0.5 + legH - 0.002, insetZ]);
+  add(softBox(0.012, railH, depth - 0.16, 0.002, 2), "legs", [-insetX, railH * 0.5 + legH - 0.002, 0]);
+  add(softBox(0.012, railH, depth - 0.16, 0.002, 2), "legs", [insetX, railH * 0.5 + legH - 0.002, 0]);
 }
 
 function buildDoughnutChair(add) {
   const width = mm(770);
   const depth = mm(670);
   const height = mm(760);
-  const hubH = 0.055;
-  add(new THREE.CylinderGeometry(0.055, 0.06, hubH, 20), "legs", [0, hubH / 2, 0]);
-  add(new THREE.CylinderGeometry(0.028, 0.032, 0.22, 16), "legs", [0, 0.16, 0]);
+  const hubH = 0.048;
+  add(new THREE.CylinderGeometry(0.052, 0.058, hubH, 22), "legs", [0, hubH / 2, 0]);
+  add(new THREE.CylinderGeometry(0.024, 0.03, 0.2, 16), "legs", [0, 0.148, 0]);
 
-  const armH = 0.012;
-  const armW = 0.042;
-  const reachX = width * 0.42;
-  const reachZ = depth * 0.4;
-  for (const [len, rotY] of [[reachX * 2, 0], [reachZ * 2, Math.PI / 2]]) {
-    add(softBox(len, armH, armW, 0.006, 4), "legs", [0, 0.012, 0], [0, rotY, 0]);
-  }
+  const reachX = width * 0.44;
+  const reachZ = depth * 0.42;
   for (const angle of [0, Math.PI / 2, Math.PI, (Math.PI * 3) / 2]) {
-    const isX = angle % Math.PI === 0;
+    const isX = Math.abs(Math.sin(angle)) > 0.5;
     const reach = isX ? reachX : reachZ;
-    const x = Math.sin(angle) * reach;
-    const z = Math.cos(angle) * reach;
-    add(new THREE.CylinderGeometry(0.012, 0.014, 0.016, 10), "legs", [x, 0.008, z]);
+    const x = Math.sin(angle) * reach * 0.5;
+    const z = Math.cos(angle) * reach * 0.5;
+    add(softBox(isX ? reach : 0.036, 0.014, isX ? 0.036 : reach, 0.006, 4), "legs", [x, 0.016, z]);
+    add(new THREE.CylinderGeometry(0.016, 0.018, 0.012, 12), "legs", [Math.sin(angle) * reach, 0.008, Math.cos(angle) * reach]);
   }
 
-  const shellW = width * 0.98;
-  const shellD = depth * 0.92;
-  const shellH = 0.38;
-  const recline = -0.18;
-  add(softBox(shellW, shellH, shellD, 0.09, 7), "primary", [0, 0.48, 0.02], [recline, 0, 0]);
-  add(
-    softBox(shellW * 0.78, 0.05, shellD * 0.62, 0.04, 5),
-    "cream",
-    [0, 0.545, -0.02],
-    [recline * 0.85, 0, 0],
+  // Continuous lounge shell: one U-tub, then a nested seat well.
+  const hw = width * 0.49;
+  const hd = depth * 0.46;
+  const arm = 0.09;
+  const back = 0.1;
+  const shell = roundedPolygon(
+    [
+      [-hw, -hd],
+      [-hw, hd],
+      [hw, hd],
+      [hw, -hd],
+      [hw - arm, -hd],
+      [hw - arm, hd - back],
+      [-hw + arm, hd - back],
+      [-hw + arm, -hd],
+    ],
+    [0.1, 0.08, 0.08, 0.1, 0.07, 0.05, 0.05, 0.07],
   );
-  add(
-    softBox(shellW * 0.9, 0.22, 0.09, 0.05, 5),
-    "primary",
-    [0, 0.62, shellD * 0.28],
-    [recline - 0.08, 0, 0],
-  );
+  add(extrudeVertical(shell, 0.34, 0.02), "primary", [0, 0.28, 0.02], [-0.16, 0, 0]);
+  add(softBox(width * 0.7, 0.05, depth * 0.56, 0.04, 6), "cream", [0, 0.46, -0.03], [-0.14, 0, 0]);
 }
 
 function buildRoundXTable(add, diameter, height, cut, topT) {
   const panelH = height - topT + 0.004;
-  const panelT = Math.min(0.02, diameter * 0.032);
-  add(roundDisk(diameter / 2, topT, 64), "primary", [0, height - topT, 0]);
-  add(xPanel(diameter * 0.96, panelH, panelT, cut), "cream", [0, 0, 0]);
-  add(xPanel(diameter * 0.96, panelH, panelT, cut), "cream", [0, 0, 0], [0, Math.PI / 2, 0]);
+  const panelT = Math.min(0.018, diameter * 0.03);
+  add(roundDisk(diameter / 2, topT, 72), "primary", [0, height - topT, 0]);
+  add(roundDisk(diameter / 2 - 0.012, 0.004, 64), "cream", [0, height - 0.003, 0]);
+  add(xPanel(diameter * 0.95, panelH, panelT, cut), "cream", [0, 0, 0]);
+  add(xPanel(diameter * 0.95, panelH, panelT, cut), "cream", [0, 0, 0], [0, Math.PI / 2, 0]);
 }
 
 function buildMeetingTable(add, diameter, height) {
-  const topT = 0.032;
-  add(roundDisk(diameter / 2, topT, 64), "primary", [0, height - topT, 0]);
+  const topT = 0.03;
+  add(roundDisk(diameter / 2, topT, 72), "primary", [0, height - topT, 0]);
+  add(roundDisk(diameter / 2 - 0.014, 0.004, 64), "cream", [0, height - 0.003, 0]);
   const attachY = height - topT - 0.002;
   const attachR = diameter * 0.13;
   const footR = diameter * 0.36;
-  const rAttach = 0.026;
-  const rFoot = 0.014;
+  const rAttach = 0.024;
+  const rFoot = 0.013;
   for (let index = 0; index < 3; index += 1) {
     const angle = (index * Math.PI * 2) / 3 + Math.PI / 6;
     addSplayedLeg(
@@ -294,7 +297,7 @@ function buildMeetingTable(add, diameter, height) {
       rFoot,
     );
     add(
-      new THREE.CylinderGeometry(0.016, 0.018, 0.012, 12),
+      new THREE.CylinderGeometry(0.015, 0.017, 0.01, 12),
       "cream",
       [Math.sin(angle) * footR, 0.006, Math.cos(angle) * footR],
     );

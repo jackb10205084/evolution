@@ -88,7 +88,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "sofa-cloud",
     sku: "HP-A475-AR-MEL-SO-02-C1AA23",
-    assetVersion: "p1-1.0.0",
+    assetVersion: "p1-1.1.0",
     name: "雙人休閒沙發",
     category: "living",
     brand: "Play Ground Living",
@@ -104,7 +104,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "table-pebble",
     sku: "HP-A475-AR-PLA-TB-01-93B567",
-    assetVersion: "p1-1.0.0",
+    assetVersion: "p1-1.1.0",
     name: "圓形茶几",
     category: "living",
     brand: "Play Ground Living",
@@ -120,7 +120,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "chair-breeze",
     sku: "HP-A475-AR-DON-LO-01-04C7E8",
-    assetVersion: "p1-1.0.0",
+    assetVersion: "p1-1.1.0",
     name: "甜甜圈四星腳休閒椅",
     category: "living",
     brand: "Play Ground Living",
@@ -346,7 +346,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "table-pla-tb-02",
     sku: "HP-A475-AR-PLA-TB-02-9D2ADC",
-    assetVersion: "p1-1.0.0",
+    assetVersion: "p1-1.1.0",
     name: "圓形茶几",
     category: "living",
     brand: "Play Ground Living",
@@ -362,7 +362,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "table-dme52-1000",
     sku: "HP-A213-DME52-B00DDF",
-    assetVersion: "p1-1.0.0",
+    assetVersion: "p1-1.1.0",
     name: "洽談桌",
     category: "dining",
     brand: "Play Ground Living",
@@ -378,7 +378,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "table-dme52-800",
     sku: "HP-A213-DME52-0D4DB8",
-    assetVersion: "p1-1.0.0",
+    assetVersion: "p1-1.1.0",
     name: "洽談桌",
     category: "dining",
     brand: "Play Ground Living",
@@ -397,10 +397,12 @@ export const ownedInitialFurnitureIds = [
   "rug-meadow",
   "sofa-cloud",
   "table-pebble",
+  "table-pla-tb-02",
   "chair-breeze",
   "lamp-moon",
   "plant-olive",
-  "shelf-cabin",
+  "table-dme52-1000",
+  "bed-soft",
 ];
 
 // Kept as the canonical launch preset for runtime validation and older adapters.
@@ -417,7 +419,7 @@ export const ikeaDemoFurnitureIds = [
 ];
 
 // 初始配置中側向（-90°）擺放的家具：計算佔地時寬深互換
-export const sideFacingFurnitureIds = ["shelf-cabin", "ikea-kallax"] as const;
+export const sideFacingFurnitureIds = ["sofa-cloud", "ikea-saltsjobaden", "shelf-cabin", "ikea-kallax"] as const;
 
 // 日光慢生活加碼配置：讓首屏就是佈置完成的家（聯盟商品置於餐廳與多功能室）
 export const sunnyBonusFurnitureIds = [
@@ -425,12 +427,11 @@ export const sunnyBonusFurnitureIds = [
   "ikea-borgeby",
   "ikea-kallax",
   "ikea-lauters",
-  "bed-soft",
 ] as const;
 
 export const themeFurnitureIds: Record<Exclude<ThemePreset["id"], "empty">, readonly string[]> = {
   sunny: [...ownedInitialFurnitureIds, ...sunnyBonusFurnitureIds],
-  urban: ["rug-meadow", "sofa-cloud", "table-pebble", "chair-breeze", "lamp-moon", "shelf-cabin"],
-  family: ["rug-meadow", "sofa-cloud", "table-pebble", "chair-breeze", "plant-olive", "shelf-cabin"],
-  pet: ["rug-meadow", "sofa-cloud", "table-pebble", "chair-breeze", "plant-olive"],
+  urban: ["rug-meadow", "sofa-cloud", "table-pebble", "table-pla-tb-02", "chair-breeze", "lamp-moon", "table-dme52-1000", "bed-soft"],
+  family: ["rug-meadow", "sofa-cloud", "table-pebble", "table-pla-tb-02", "chair-breeze", "plant-olive", "table-dme52-1000", "bed-soft"],
+  pet: ["rug-meadow", "sofa-cloud", "table-pebble", "table-pla-tb-02", "chair-breeze", "plant-olive", "table-dme52-1000", "bed-soft"],
 };
