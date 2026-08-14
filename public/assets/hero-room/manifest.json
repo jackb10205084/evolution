@@ -4,13 +4,18 @@
   "style": "high-key-pastel-dollhouse",
   "units": "meter",
   "upAxis": "Y",
-  "generatedBy": "HomePlay deterministic GLB builder",
+  "generatedBy": "HomePlay round-nuo watercolor GLB builder",
   "pipeline": {
     "optimizer": "@gltf-transform/cli",
     "compression": "meshopt",
     "validator": "Khronos glTF Validator",
     "preservesNamedMaterials": true,
     "simplifiesGeometry": false
+  },
+  "lookdev": {
+    "shapeLanguage": "round-nuo-volume",
+    "albedo": "watercolor-wash",
+    "shading": "web-toon-unlit"
   },
   "assets": [
     "sofa-soft.glb",

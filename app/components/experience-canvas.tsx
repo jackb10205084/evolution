@@ -52,7 +52,7 @@ const heroAssetPaths: Record<FurnitureItem["shape"], string> = {
   bed: "/assets/hero-room/bed-soft.glb",
 };
 
-const mascotAssetPath = "/assets/hero-room/mascot-resident.glb?v=2";
+const mascotAssetPath = "/assets/hero-room/mascot-resident.glb?v=lookdev-3";
 
 export function ExperienceCanvas(props: Props) {
   const palette = roomPalette[props.themeId] ?? roomPalette.sunny;
@@ -766,18 +766,20 @@ function cloneAsToon(sourceScene: THREE.Group, resolveColor: (role: string, sour
   const meshes: THREE.Mesh[] = [];
   clone.traverse((child) => { if (child instanceof THREE.Mesh) meshes.push(child); });
   meshes.forEach((child) => {
-    const original = (Array.isArray(child.material) ? child.material[0] : child.material) as THREE.Material & { color?: THREE.Color };
+    const original = (Array.isArray(child.material) ? child.material[0] : child.material) as THREE.MeshStandardMaterial;
     const role = original.name || child.name;
     const source = original.color ? `#${original.color.getHexString()}` : "#f3e6d2";
     const color = resolveColor(role, source);
     const displayColor = new THREE.Color(color).lerp(new THREE.Color("#fff8ef"), selected ? 0.06 : 0);
+    const map = original.map ?? null;
     child.material = flat
-      ? new THREE.MeshBasicMaterial({ color: displayColor, toneMapped: false })
+      ? new THREE.MeshBasicMaterial({ color: displayColor, map, toneMapped: false })
       : new THREE.MeshToonMaterial({
           color: displayColor,
+          map,
           gradientMap: toonGradient,
           toneMapped: false,
-          emissive: displayColor,
+          emissive: new THREE.Color("#000000"),
           emissiveIntensity: 0,
         });
     child.userData.homeplayToonSurface = true;

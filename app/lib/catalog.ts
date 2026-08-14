@@ -88,7 +88,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "sofa-cloud",
     sku: "PG-SF-001",
-    assetVersion: "1.3.0",
+    assetVersion: "1.4.0",
     name: "雲朵雙人沙發",
     category: "living",
     brand: "Play Ground Living",
@@ -103,7 +103,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "table-pebble",
     sku: "PG-TB-014",
-    assetVersion: "1.1.0",
+    assetVersion: "1.2.0",
     name: "小石橢圓桌",
     category: "living",
     brand: "Play Ground Living",
@@ -118,7 +118,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "chair-breeze",
     sku: "PG-CH-008",
-    assetVersion: "2.1.0",
+    assetVersion: "2.2.0",
     name: "微風扶手椅",
     category: "living",
     brand: "Play Ground Living",
@@ -133,7 +133,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "rug-meadow",
     sku: "PG-RG-021",
-    assetVersion: "1.1.0",
+    assetVersion: "1.2.0",
     name: "草原手織地毯",
     category: "decor",
     brand: "Play Ground Living",
@@ -148,7 +148,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "lamp-moon",
     sku: "LM-221",
-    assetVersion: "1.0.0",
+    assetVersion: "1.1.0",
     name: "小月球立燈",
     category: "decor",
     brand: "Lumi Maison",
@@ -164,7 +164,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "plant-olive",
     sku: "GR-OL-09",
-    assetVersion: "1.3.2",
+    assetVersion: "1.4.0",
     name: "橄欖樹植栽",
     category: "decor",
     brand: "Green Room",
@@ -180,7 +180,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "shelf-cabin",
     sku: "PG-ST-012",
-    assetVersion: "1.0.5",
+    assetVersion: "1.1.0",
     name: "小屋模組收納櫃",
     category: "living",
     brand: "Play Ground Living",
@@ -195,7 +195,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "bed-soft",
     sku: "PG-BD-004",
-    assetVersion: "1.4.0",
+    assetVersion: "1.5.0",
     name: "綿島雙人床",
     category: "bedroom",
     brand: "Play Ground Living",
@@ -210,7 +210,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "ikea-saltsjobaden",
     sku: "IKEA-195.999.18",
-    assetVersion: "ikea-demo-1.0.0",
+    assetVersion: "ikea-demo-1.1.0",
     name: "SALTSJÖBADEN 雙人座沙發",
     category: "living",
     brand: "IKEA",
@@ -229,7 +229,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "ikea-borgeby",
     sku: "IKEA-704.494.02",
-    assetVersion: "ikea-demo-1.0.0",
+    assetVersion: "ikea-demo-1.1.0",
     name: "BORGEBY 圓形咖啡桌",
     category: "living",
     brand: "IKEA",
@@ -248,7 +248,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "ikea-ekenaset",
     sku: "IKEA-705.334.91",
-    assetVersion: "ikea-demo-1.0.0",
+    assetVersion: "ikea-demo-1.1.0",
     name: "EKENÄSET 扶手椅",
     category: "living",
     brand: "IKEA",
@@ -267,7 +267,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "ikea-stoense",
     sku: "IKEA-206.076.82",
-    assetVersion: "ikea-demo-1.0.0",
+    assetVersion: "ikea-demo-1.1.0",
     name: "STOENSE 米色短毛地毯",
     category: "decor",
     brand: "IKEA",
@@ -286,7 +286,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "ikea-lauters",
     sku: "IKEA-604.050.50",
-    assetVersion: "ikea-demo-1.0.0",
+    assetVersion: "ikea-demo-1.1.0",
     name: "LAUTERS 梣木落地燈",
     category: "decor",
     brand: "IKEA",
@@ -305,7 +305,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "ikea-fejka-fig",
     sku: "IKEA-106.152.77",
-    assetVersion: "ikea-demo-1.0.0",
+    assetVersion: "ikea-demo-1.1.0",
     name: "FEJKA 垂葉榕人造盆栽",
     category: "decor",
     brand: "IKEA",
@@ -324,7 +324,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "ikea-kallax",
     sku: "IKEA-006.289.30",
-    assetVersion: "ikea-demo-1.0.0",
+    assetVersion: "ikea-demo-1.1.0",
     name: "KALLAX 2×3 層架組",
     category: "living",
     brand: "IKEA",
