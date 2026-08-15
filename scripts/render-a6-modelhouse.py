@@ -138,27 +138,23 @@ glass(min(a[0], b[0]), min(a[1], b[1]) - 0.04, max(a[0], b[0]), max(a[1], b[1]) 
 def furniture(x, z, w, d, h, color):
     box(x - w/2, z - d/2, x + w/2, z + d/2, 0.02, h, color, (180, 168, 156))
 
-# 客廳
-furniture(-1.85, -1.55, 2.20, 1.40, 0.04, (232, 196, 150))  # rug
-furniture(-1.85, -0.88, 1.56, 0.84, 0.42, (224, 138, 104))  # sofa catalog 1560x840
-furniture(-1.85, -1.88, 0.70, 0.70, 0.22, (242, 235, 225))  # table
-furniture(-0.92, -2.18, 0.77, 0.67, 0.40, (196, 160, 110))  # chair
-furniture(-2.72, -1.28, 0.22, 0.22, 0.95, (241, 201, 109))  # lamp
-furniture(-2.78, -2.58, 0.42, 0.42, 0.85, (109, 143, 101))  # plant
-furniture(-2.95, 0.12, 0.42, 1.20, 0.95, (188, 139, 95))    # shelf
+# 客廳 — sales-deck p4–p20, sofa side-facing 1560x840 toward spine
+furniture(-1.92, -1.70, 2.50, 1.65, 0.04, (232, 196, 150))  # rug
+furniture(-2.42, -1.88, 0.84, 1.56, 0.42, (224, 138, 104))  # sofa catalog, face spine
+furniture(-1.52, -1.88, 0.38, 0.38, 0.22, (242, 235, 225))  # 380 coffee
+furniture(-1.50, -0.95, 0.77, 0.67, 0.40, (196, 160, 110))  # chair lounge
+furniture(-2.96, -2.90, 0.22, 0.22, 0.95, (241, 201, 109))  # lamp
+furniture(-2.20, -2.78, 0.42, 0.42, 0.85, (109, 143, 101))  # plant
+# no dining table — deck uses breakfast bar millwork, not φ1000
 
-# 餐廳
-furniture(-1.68, 1.38, 0.70, 0.70, 0.38, (196, 160, 122))
-
-# kitchen run along 餐廳 left wall
-box(-3.22, 0.70, -2.66, 2.55, 0.02, 0.88, (246, 242, 234), (200, 190, 178))
+# kitchen run along 餐廳 left wall (FixedKitchen)
+box(-3.22, 0.53, -2.66, 2.83, 0.02, 0.88, (246, 242, 234), (200, 190, 178))
 # REF in 玄關
-box(-2.62, 3.20, -1.98, 3.82, 0.02, 1.15, (244, 238, 225), (200, 190, 178))
+box(-3.22, 3.18, -2.66, 3.86, 0.02, 1.15, (244, 238, 225), (200, 190, 178))
 
-# 主臥 bed catalog 1820x2080
-furniture(1.82, 0.08, 1.82, 1.70, 0.38, (169, 182, 202))
-# 多功能室 shelf
-furniture(0.72, -2.52, 0.76, 0.39, 0.70, (240, 238, 232))
+# 主臥 bed catalog 1820x2080, headboard toward bath
+furniture(1.72, 0.30, 1.82, 2.08, 0.38, (169, 182, 202))
+# 多功能室 left empty — no desk/daybed SKU
 
 # room labels
 try:

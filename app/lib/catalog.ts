@@ -396,12 +396,10 @@ export const catalog: FurnitureItem[] = [
 export const ownedInitialFurnitureIds = [
   "rug-meadow",
   "sofa-cloud",
-  "table-pebble",
   "table-pla-tb-02",
   "chair-breeze",
   "lamp-moon",
   "plant-olive",
-  "table-dme52-1000",
   "bed-soft",
 ];
 
@@ -431,7 +429,7 @@ export const sunnyBonusFurnitureIds = [
 
 export const themeFurnitureIds: Record<Exclude<ThemePreset["id"], "empty">, readonly string[]> = {
   sunny: [...ownedInitialFurnitureIds, ...sunnyBonusFurnitureIds],
-  urban: ["rug-meadow", "sofa-cloud", "table-pebble", "table-pla-tb-02", "chair-breeze", "lamp-moon", "table-dme52-1000", "bed-soft"],
-  family: ["rug-meadow", "sofa-cloud", "table-pebble", "table-pla-tb-02", "chair-breeze", "plant-olive", "table-dme52-1000", "bed-soft"],
-  pet: ["rug-meadow", "sofa-cloud", "table-pebble", "table-pla-tb-02", "chair-breeze", "plant-olive", "table-dme52-1000", "bed-soft"],
+  urban: ["rug-meadow", "sofa-cloud", "table-pla-tb-02", "chair-breeze", "lamp-moon", "bed-soft"],
+  family: ["rug-meadow", "sofa-cloud", "table-pla-tb-02", "chair-breeze", "plant-olive", "bed-soft"],
+  pet: ["rug-meadow", "sofa-cloud", "table-pla-tb-02", "chair-breeze", "plant-olive", "bed-soft"],
 };

@@ -109,25 +109,27 @@ A6 已升級為 `A6_SHELL_V3`：I1A6-01 左圖 poche 與門窗向量重抽，門
 | 3D 狀態 | runtime | 已改為多段退縮底板，納入玄關凸出、次臥、衛浴凸出、主臥及三段前窗。正面 8.65 m 為確認尺寸；衛浴凸出後最大外框約 8.955 m，等比暫定深度約 9.548 m。 |
 
 
-## A6 furniture placement (I1A6-02 p.3 + pitch 完成方案)
+## A6 furniture placement (銷講簡報 p4–p20 完成方案)
 
-World xz uses the same 6.825 m / 388.44 pt scale as `A6_SHELL_V3`. PDF user-space is the left-hand plan on page 3. Catalog millimetres are not scaled to the sample-house notes.
+World xz uses the same 6.825 m / 388.44 pt scale as `A6_SHELL_V3`. Layout follows 遠雄BH7樣品屋提案_251029銷講簡報 pages 4–20, not the 12-page business pptx and not the I1A6-02 dining-table pile. Catalog millimetres are not scaled to the sample-house notes.
 
-| id | room | world xz (m) | PDF source (pt) | catalog mm | note |
+| id | room | world xz (m) | source | catalog mm | note |
 | --- | --- | --- | --- | --- | --- |
-| sofa-cloud | 客廳 | −2.77, −1.22 | 100x230 note (155.8, 327.0); block ~ (178.8, 327.0) | 1560×840×720 | Left living wall, facing coffee / open room. Not shrunk to 100×230. |
-| table-pebble | 客廳 | −1.88, −0.77 | 50x120 (219.8, 352.6) | 700×700×380 | PLA-TB-01 stand-in for the larger low-table zone. |
-| table-pla-tb-02 | 客廳 | −1.90, −1.41 | 50x75 (222.0, 316.1) | 380×380×460 | Fits the smaller zone without colliding. |
-| chair-breeze | 客廳 | −1.62, −2.18 | ~ (248.4, 272.3) | 770×670×760 | Doughnut lounge near sofa, clear of the spine corridor. |
-| rug-meadow | 客廳 | −1.83, −1.18 | ~ (236.4, 329.2) | 2500×1650×40 | Under sofa + coffee. Pitch 完成方案 rhythm. |
-| lamp-moon | 客廳 | −2.92, −2.38 | ~ (174.5, 260.9) | 450×450×1550 | Beside sofa toward the balcony. |
-| plant-olive | 客廳 | −2.38, −2.82 | ~ (205.2, 235.9) | 720×720×1650 | Living balcony corner. |
-| table-dme52-1000 | 餐廳 | −1.70, 1.90 | 餐廳 (235.6, 507.3) | φ1000×750 | 167.5 cm dining envelope fits 1000 mm. GLB not scaled. |
-| bed-soft | 主臥 | 1.35, 0.10 | 150 (417.4, 464.3); 152 chain center y=402.1 | 1820×2080×880 | Catalog bed in the ~150 cm zone. |
-| FixedKitchen / REF | 餐廳左牆 / 玄關 | (−2.94, 1.68) / REF z+1.82 | kitchen 65 cm; REF (219.2, 569.7) | built-in | Unchanged. No invented fridge SKU. |
-| 多功能室 desk | 多功能室 | — | 197.5 (353.8, 214.7) | — | Built-in desk; no matching SKU. Left empty. |
+| sofa-cloud | 客廳 | −2.42, −1.88 | p4 / p7–p9 / p17 / p20 | 1560×840×720 | Balcony-window end of 客廳, yaw −90° so it faces the spine/TV wall. Not piled on the mid left wall. Not shrunk to 100×230. |
+| table-pla-tb-02 | 客廳 | −1.52, −1.88 | p4 50×75 / p7 nesting coffee | 380×380×460 | Default coffee in front of sofa. PLA-TB-01 700 is too big for this zone. |
+| chair-breeze | 客廳 | −1.50, −0.95 | p7–p9 lounge / bar-stool stand-in | 770×670×760 | Doughnut lounge beside sofa. No bar-stool SKU. |
+| rug-meadow | 客廳 | −1.92, −1.70 | living group | 2500×1650×40 | Under sofa + 380 coffee. |
+| lamp-moon | 客廳 | −2.96, −2.90 | p20 window light | 450×450×1550 | Living balcony-window corner. |
+| plant-olive | 客廳 | −2.20, −2.78 | p20 window light | 720×720×1650 | Living window corner, inside the slider. |
+| bed-soft | 主臥 | 1.72, 0.30 | p13–p14 headboard wall | 1820×2080×880 | Centered on the interior headboard wall toward bath (+Z). West door kept clear. |
+| FixedKitchen / REF | 餐廳左牆 / 玄關 | (−2.94, 1.68) / REF z+1.82 | p4–p9 / p17 | built-in | Unchanged. No invented island / fridge SKU. Deck 吧檯 is millwork, not a catalog table. |
+| table-dme52-1000 | — | parked (−1.70, 1.90) | removed from default | φ1000×750 | Not in the A6 完成方案. Deck uses a breakfast bar, not a meeting table. |
+| table-pebble | — | parked (−1.52, −1.05) | removed from default | 700×700×380 | Too big for the 50×75 coffee. Not a second coffee. |
+| shelf-cabin | — | add-spot (1.40, −2.80) | omitted | 1500×420×1650 | Too tall to stand in for the floating TV console; would read as a divider. |
+| 多功能室 desk / daybed | 多功能室 | — | p10–p12 built-in | — | No matching SKU. Left empty. |
+| 主臥 wardrobe | 主臥 | — | p13–p14 built-in | — | No matching SKU. Not invented. |
 
-Pitch deck (`homeplay-pitch.pptx`) supplies the 完成方案 rhythm only (sofa + rug + round table + lamp, dining near entry, slat partition at 玄關 as existing shell). It is not a second floor plan.
+Sales-deck rasters live at `/workspace/lookdev-p1/sales-deck/p-04.png` … `p-20.png`. Preview: `docs/design-system/a6-preview-45.png`.
 
 ## 正式模型驗收條件
 
