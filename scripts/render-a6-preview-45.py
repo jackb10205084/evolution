@@ -22,16 +22,15 @@ def world(x, y):
     return ((x - cx) * scale, (y - cy) * scale)
 
 
-# 45° azimuth from SE (entry / bath) looking toward balcony / living,
-# 45° elevation — finished-room look-down, not a 2D plan, not a GLB grid.
-S = 78.0
-ORIGIN = (900, 210)
-INV = math.sqrt(2.0)
+# Plan-aligned 45° from south (玄關) looking north (陽台).
+# +X east = right. +Z south/entry = down the image. Matches 樣品屋 p4.
+S = 92.0
+ORIGIN = (900, 620)
 
 
 def iso(x, y, z):
-    sx = ORIGIN[0] + (x - z) * S / INV
-    sy = ORIGIN[1] + (x + z) * S / 2.0 - y * S / INV
+    sx = ORIGIN[0] + x * S
+    sy = ORIGIN[1] + z * S * 0.72 - y * S * 0.72
     return (sx, sy)
 
 
@@ -77,9 +76,9 @@ fp_pdf = [
 ]
 fp = [world(*p) for p in fp_pdf]
 
-for r, a in ((560, 26), (470, 38), (380, 20)):
+for r, a in ((620, 26), (520, 38), (420, 20)):
     draw.ellipse(
-        [ORIGIN[0] - r, ORIGIN[1] + 80, ORIGIN[0] + r + 30, ORIGIN[1] + r * 0.62 + 160],
+        [ORIGIN[0] - r, ORIGIN[1] - 40, ORIGIN[0] + r, ORIGIN[1] + r * 0.55 + 80],
         fill=(232, 224, 214, a),
     )
 
@@ -189,20 +188,21 @@ try:
 except Exception:
     font = font_s = title_font = small = ImageFont.load_default()
 
+# I1A6-01 / 樣品屋 left-plan text anchors (page 2)
 labels = [
-    (-1.90, -1.70, "客廳"),
-    (-2.00, 1.55, "餐廳"),
-    (-2.10, 3.50, "玄關"),
-    (0.70, -2.70, "多功能室"),
-    (1.72, 0.20, "主臥"),
-    (1.40, 2.55, "衛浴"),
+    (*world(230.5, 300.5), "客廳"),
+    (*world(234.8, 485.5), "餐廳"),
+    (*world(251.9, 602.3), "玄關"),
+    (*world(361.9, 230.5), "多功能室"),
+    (*world(421.1, 391.7), "主臥"),
+    (*world(421.1, 507.9), "衛浴"),
 ]
 for x, z, text in labels:
     px, py = iso(x, 0.22, z)
     draw.text((px - 30, py - 8), text, fill=(101, 88, 84, 200), font=font_s)
 
-draw.text((56, 44), "BH7 A6  ·  45° finished-room preview", fill=(101, 88, 84), font=title_font)
-draw.text((56, 86), "I1A6-01 shell  ·  sales-deck p4–p20 placement  ·  catalog mm  ·  not construction-true", fill=(129, 120, 114), font=small)
+draw.text((56, 44), "BH7 A6  ·  45°  陽台在上 · 入口在下", fill=(101, 88, 84), font=title_font)
+draw.text((56, 86), "樣品屋平面  ·  多功能室在客廳東側、主臥北側  ·  catalog mm", fill=(129, 120, 114), font=small)
 draw.text((56, 110), "watercolor = matte wash only   ·   no ACES / bloom / photo wood   ·   no invented island / wardrobe / desk", fill=(129, 120, 114), font=small)
 
 out = "/workspace/evolution/docs/design-system/a6-preview-45.png"
