@@ -701,40 +701,43 @@ function PorcelainBasin() {
 }
 
 function FixedBaths() {
-  // World xz from I1A6-02 bays via A6_SHELL_V3 point() (6.825 m / 388.44 pt).
+  // World xz from I1A6-01/02 fixture symbols via A6_SHELL_V3 point() (6.825 m / 388.44 pt).
   // 主衛 interior x 390.24–526.92 (240 cm), y 484.32–549.6 (115 cm).
-  // West→east inside 主衛: 150 wet + 10 partition + 80 toilet. Vanity 107.5×60 sits in the 150 bay.
-  // 客衛 interior x 351.96–437.52 (150 cm), y 569.4–647.88. Sink west, toilet east. 管道間 empty.
+  // Overlay: 150 bay = 60 sink + 90 toilet against the south wall; 80 east bay is the wet tray.
+  // 客衛 interior x 351.96–437.52, y 569.4–647.88. Toilet oval is I1A6-02 p2 (412.5, 590.5),
+  // against the north wall west of 管道間 — not inside the chase, not the old south-center seat.
   return (
     <group>
-      {/* 主衛 vanity 107.5×60 against north of the 150 bay */}
-      <group position={[1.409, 0, 1.844]}>
+      {/* 主衛 vanity 60×60, south-west of the 150 bay (I1A6-02 60 mark) */}
+      <group position={[1.172, 0, 2.391]}>
         <RigidBody type="fixed" colliders={false}>
-          <CuboidCollider args={[0.538, 0.42, 0.3]} position={[0, 0.42, 0]} />
+          <CuboidCollider args={[0.3, 0.42, 0.3]} position={[0, 0.42, 0]} />
         </RigidBody>
-        <PorcelainBasin />
+        <group scale={[0.56, 1, 1]}>
+          <PorcelainBasin />
+        </group>
       </group>
-      {/* 主衛 shower tray 150×115 */}
-      <group position={[1.622, 0, 2.118]}>
+      {/* 主衛 shower tray 80×115 in the east bay */}
+      <group position={[2.873, 0, 2.118]}>
         <RigidBody type="fixed" colliders={false}>
-          <CuboidCollider args={[0.75, 0.06, 0.575]} position={[0, 0.06, 0]} />
+          <CuboidCollider args={[0.4, 0.06, 0.575]} position={[0, 0.06, 0]} />
         </RigidBody>
-        <RoundedBox position={[0, 0.03, 0]} args={[1.5, 0.06, 1.15]} radius={0.04} smoothness={3}>
+        <RoundedBox position={[0, 0.03, 0]} args={[0.8, 0.06, 1.15]} radius={0.04} smoothness={3}>
           <meshToonMaterial color="#eef2f3" gradientMap={toonGradient} toneMapped={false} />
         </RoundedBox>
-        <RoundedBox position={[0.72, 0.95, 0]} args={[0.04, 1.9, 1.12]} radius={0.02} smoothness={3}>
+        <RoundedBox position={[-0.38, 0.95, 0]} args={[0.04, 1.9, 1.12]} radius={0.02} smoothness={3}>
           <meshBasicMaterial color="#d7e3e8" transparent opacity={0.35} toneMapped={false} />
         </RoundedBox>
       </group>
-      {/* 主衛 toilet in the 80 cm east bay */}
-      <group position={[2.873, 0, 1.994]}>
+      {/* 主衛 toilet in the 90 cm of the 150 bay, tank on the south wall */}
+      <group position={[1.922, 0, 2.341]}>
         <RigidBody type="fixed" colliders={false}>
           <CuboidCollider args={[0.2, 0.4, 0.26]} position={[0, 0.4, 0]} />
         </RigidBody>
         <PorcelainToilet />
       </group>
-      {/* 客衛 sink, 60 cm off the west wall */}
-      <group position={[0.499, 0, 3.339]}>
+      {/* 客衛 sink, west against the north wall */}
+      <group position={[0.507, 0, 3.313]}>
         <RigidBody type="fixed" colliders={false}>
           <CuboidCollider args={[0.3, 0.42, 0.28]} position={[0, 0.42, 0]} />
         </RigidBody>
@@ -742,8 +745,8 @@ function FixedBaths() {
           <PorcelainBasin />
         </group>
       </group>
-      {/* 客衛 toilet, east bay of the 150 cm room */}
-      <group position={[1.403, 0, 3.739]}>
+      {/* 客衛 toilet: I1A6-01/02 oval center p2 (412.5, 590.5) → (1.263, 3.410) */}
+      <group position={[1.263, 0, 3.41]}>
         <RigidBody type="fixed" colliders={false}>
           <CuboidCollider args={[0.2, 0.4, 0.26]} position={[0, 0.4, 0]} />
         </RigidBody>
