@@ -79,36 +79,38 @@ const runtimes: Record<FloorplanRuntime["floorplanId"], FloorplanRuntime> = {
       // 銷講簡報 p4–p20 完成方案. World xz = A6_SHELL_V3 scale (6.825 m / 388.44 pt).
       // Catalog mm stay catalog — sofa 1560x840, not the sample-house 100x230 note.
       // Yaw: sofa stays in sideFacingFurnitureIds (−90°) so it FACES the spine/TV wall.
-      // sofa-cloud: 客廳, balcony-window end (not mid left-wall pile). Back to west light, face spine.
-      "sofa-cloud": [-2.42, -1.88],
+      // sofa-cloud: 客廳, balcony-window end (p7/p17/p20). Back to west light, face spine.
+      // Nudged east of outer-left (~0.56 m gap) and north toward 220 slider light. Catalog 1560×840.
+      "sofa-cloud": [-2.28, -2.02],
       // table-pla-tb-02 380: coffee in front of sofa toward the spine. Deck 50x75 zone; 700 is too big.
-      "table-pla-tb-02": [-1.52, -1.88],
+      "table-pla-tb-02": [-1.40, -2.02],
       // table-pebble PLA-TB-01 700: NOT the default coffee. Parked only if someone adds the SKU later.
-      "table-pebble": [-1.52, -1.05],
-      // chair-breeze: lounge seat beside sofa (deck bar stools have no SKU).
-      "chair-breeze": [-1.50, -0.95],
+      "table-pebble": [-1.40, -1.18],
+      // chair-breeze: lounge seat south of coffee (deck bar stools have no SKU). Yaw π faces the group.
+      "chair-breeze": [-1.36, -1.15],
       // rug-meadow: under sofa + 380 coffee group.
-      "rug-meadow": [-1.92, -1.70],
+      "rug-meadow": [-1.82, -1.88],
       // lamp-moon: 客廳 balcony-window corner (p20 afternoon light).
-      "lamp-moon": [-2.96, -2.90],
+      "lamp-moon": [-2.88, -2.96],
       // plant-olive: living window corner, inside the slider.
-      "plant-olive": [-2.20, -2.78],
+      "plant-olive": [-2.08, -2.86],
       // table-dme52-1000/800: NOT in the A6 完成方案 (deck uses a breakfast bar, no dining table).
       // Positions kept so a manual add still resolves; default loadout omits them.
       "table-dme52-1000": [-1.70, 1.90],
       "table-dme52-800": [-1.70, 1.90],
-      // bed-soft: 主臥, centered on the interior headboard wall toward bath (south, +Z). Door kept clear west.
-      "bed-soft": [1.72, 0.30],
+      // bed-soft: 主臥, headboard toward bath (south, +Z). Shifted west so east edge (~2.39) clears
+      // master-balcony-door west jamb (~2.58) into 右陽台. West entry door kept clear.
+      "bed-soft": [1.48, 0.22],
       // shelf-cabin: omitted from loadout — 1650 h would read as a floor divider, not a TV console.
       // Stored against 多功能室 east wall as an add-spot only. No invented desk/daybed.
       "shelf-cabin": [1.40, -2.80],
-      "ikea-stoense": [-1.92, -1.70], "ikea-saltsjobaden": [-2.42, -1.88], "ikea-borgeby": [-1.52, -1.88],
-      "ikea-ekenaset": [-1.50, -0.95], "ikea-lauters": [-2.96, -2.90], "ikea-fejka-fig": [-2.20, -2.78],
+      "ikea-stoense": [-1.82, -1.88], "ikea-saltsjobaden": [-2.28, -2.02], "ikea-borgeby": [-1.40, -2.02],
+      "ikea-ekenaset": [-1.36, -1.15], "ikea-lauters": [-2.88, -2.96], "ikea-fejka-fig": [-2.08, -2.86],
       "ikea-kallax": [1.40, -2.80],
     },
     bonusPositions: {
       "ikea-fejka-fig": [-0.95, 2.55], "ikea-borgeby": [-1.15, 1.15], "ikea-kallax": [0.72, -2.52],
-      "ikea-lauters": [-0.70, 1.55], "bed-soft": [1.72, 0.30],
+      "ikea-lauters": [-0.70, 1.55], "bed-soft": [1.48, 0.22],
     },
     candidateSpots: [[-2.20, 0.45], [-1.35, 0.45], [-2.20, -1.85], [-1.20, -1.85], [0.75, -2.20], [0.75, -3.20], [1.45, 0.55], [2.10, 0.55]],
     mascotStart: [-0.85, 2.15],

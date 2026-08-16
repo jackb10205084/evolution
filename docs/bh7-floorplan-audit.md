@@ -118,13 +118,13 @@ World xz uses the same 6.825 m / 388.44 pt scale as `A6_SHELL_V3`. Layout follow
 
 | id | room | world xz (m) | source | catalog mm | note |
 | --- | --- | --- | --- | --- | --- |
-| sofa-cloud | 客廳 | −2.42, −1.88 | p4 / p7–p9 / p17 / p20 | 1560×840×720 | Balcony-window end of 客廳, yaw −90° so it faces the spine/TV wall. Not piled on the mid left wall. Not shrunk to 100×230. |
-| table-pla-tb-02 | 客廳 | −1.52, −1.88 | p4 50×75 / p7 nesting coffee | 380×380×460 | Default coffee in front of sofa. PLA-TB-01 700 is too big for this zone. |
-| chair-breeze | 客廳 | −1.50, −0.95 | p7–p9 lounge / bar-stool stand-in | 770×670×760 | Doughnut lounge beside sofa. No bar-stool SKU. |
-| rug-meadow | 客廳 | −1.92, −1.70 | living group | 2500×1650×40 | Under sofa + 380 coffee. |
-| lamp-moon | 客廳 | −2.96, −2.90 | p20 window light | 450×450×1550 | Living balcony-window corner. |
-| plant-olive | 客廳 | −2.20, −2.78 | p20 window light | 720×720×1650 | Living window corner, inside the slider. |
-| bed-soft | 主臥 | 1.72, 0.30 | p13–p14 headboard wall | 1820×2080×880 | Centered on the interior headboard wall toward bath (+Z). West door kept clear. |
+| sofa-cloud | 客廳 | −2.28, −2.02 | p4 / p7–p9 / p17 / p20 | 1560×840×720 | Balcony-window end of 客廳, yaw −90° so it faces the spine/TV wall. ~0.56 m off west wall (not stuck). Nudged north toward 220 slider light. Not shrunk to 100×230. |
+| table-pla-tb-02 | 客廳 | −1.40, −2.02 | p4 50×75 / p7 nesting coffee | 380×380×460 | Default coffee in front of sofa toward spine. PLA-TB-01 700 is too big for this zone. |
+| chair-breeze | 客廳 | −1.36, −1.15 | p7–p9 lounge / bar-stool stand-in | 770×670×760 | Doughnut lounge south of coffee, facing the group. No bar-stool SKU. |
+| rug-meadow | 客廳 | −1.82, −1.88 | living group | 2500×1650×40 | Under sofa + 380 coffee. |
+| lamp-moon | 客廳 | −2.88, −2.96 | p20 window light | 450×450×1550 | Living balcony-window corner. |
+| plant-olive | 客廳 | −2.08, −2.86 | p20 window light | 720×720×1650 | Living window corner, inside the slider. |
+| bed-soft | 主臥 | 1.48, 0.22 | p13–p14 headboard wall | 1820×2080×880 | Headboard toward bath (+Z). Shifted west so east edge (~2.39) clears master-balcony-door west jamb (~2.58) into 右陽台. West entry kept clear. |
 | FixedKitchen / REF | 餐廳 C 字 | west (−2.94, 1.69)／south (−2.66, 2.62)／sink (−2.42, 2.59)／REF (−1.72, 2.57) | I1A6-02 C：西爐 0.65×1.21、南迴 1.19×0.65、REF ~0.70×0.75 | built-in | Cooktop on west NORTH half (1.54). Sink on south return. REF east of sink, north of 玄關隔間, east=262.68. No island / washer / second fridge / stools. |
 | dining-1675 | 餐廳 | (−2.43, 0.64) | I1A6-02 167.5 × 89.4／p.2 [155.04, 407.64, 249.36, 458.28] | built-in | North bar of the kitchen C. Already correct — kept. Not catalog DME52. |
 | FixedBaths 主衛 vanity | 主衛 | (1.172, 2.640) | I1A6-02 60 mark, flush to partition-bath-top | built-in | Was (1.172, 2.391) against the east pipe-shelf line y=549.6. Same 60 bay; snapped to 主衛南隔間 y=563.76. |
@@ -134,7 +134,7 @@ World xz uses the same 6.825 m / 388.44 pt scale as `A6_SHELL_V3`. Layout follow
 | FixedBaths 客衛 toilet | 客衛 | (1.263, 3.410) | I1A6-01/02 oval p2 (412.5, 590.5) | built-in | Snapped to the drawing oval, north wall of 客衛, west of 管道間. Old (1.403, 3.739) was too south. Chase empty. |
 | FixedBaths 客衛 shower | 客衛 | (2.261, 3.923) | I1A6-01 poche [442.08, 591.48, 496.56, 647.88] (bath-core / pipe-left / pipe-bottom / south wall) | built-in | Enclosed 淋浴間 in the east bay Julian circled (east of toilet, beside 管道間). Bay 95.7×99.1 cm from existing poche; not G11 70×100, not b3 40×65. No new wall. |
 | table-dme52-1000 | — | parked (−1.70, 1.90) | removed from default | φ1000×750 | Not in the A6 完成方案. Deck uses a breakfast bar, not a meeting table. |
-| table-pebble | — | parked (−1.52, −1.05) | removed from default | 700×700×380 | Too big for the 50×75 coffee. Not a second coffee. |
+| table-pebble | — | parked (−1.40, −1.18) | removed from default | 700×700×380 | Too big for the 50×75 coffee. Not a second coffee. |
 | shelf-cabin | — | add-spot (1.40, −2.80) | omitted | 1500×420×1650 | Too tall to stand in for the floating TV console; would read as a divider. |
 | 多功能室 desk / daybed | 多功能室 | — | p10–p12 built-in | — | No matching SKU. Left empty. |
 | 主臥 wardrobe | 主臥 | — | p13–p14 built-in | — | No matching SKU. Not invented. |

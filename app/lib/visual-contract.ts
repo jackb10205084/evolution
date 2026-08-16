@@ -2,6 +2,7 @@ export const HOMEPLAY_VISUAL_VERSION = "v2-original-cozy" as const;
 
 export type LookMode = "cute" | "physical";
 
+/** Official site default. Lookdev preview also accepts "real" / "實品" as aliases of physical. */
 export const defaultLookMode: LookMode = "cute";
 
 /** Cute keeps current fillets. Physical straightens 0.05→~0.012 and fridge-class 0.12→~0.02. */
