@@ -702,14 +702,14 @@ function PorcelainBasin() {
 
 function FixedBaths() {
   // World xz from I1A6-01/02 fixture symbols via A6_SHELL_V3 point() (6.825 m / 388.44 pt).
-  // 主衛 interior x 390.24–526.92 (240 cm), y 484.32–549.6 (115 cm).
-  // Overlay: 150 bay = 60 sink + 90 toilet against the south wall; 80 east bay is the wet tray.
+  // 主衛 150 bay south is partition-bath-top (y=563.76, z=2.940), not the east pipe-shelf at 549.6.
+  // Overlay: 150 bay = 60 sink + 90 toilet against that south wall; 80 east bay is the wet tray.
   // 客衛 interior x 351.96–437.52, y 569.4–647.88. Toilet oval is I1A6-02 p2 (412.5, 590.5),
   // against the north wall west of 管道間 — not inside the chase, not the old south-center seat.
   return (
     <group>
-      {/* 主衛 vanity 60×60, south-west of the 150 bay (I1A6-02 60 mark) */}
-      <group position={[1.172, 0, 2.391]}>
+      {/* 主衛 vanity 60×60, south-west of the 150 bay, flush to partition-bath-top */}
+      <group position={[1.172, 0, 2.64]}>
         <RigidBody type="fixed" colliders={false}>
           <CuboidCollider args={[0.3, 0.42, 0.3]} position={[0, 0.42, 0]} />
         </RigidBody>
@@ -729,8 +729,8 @@ function FixedBaths() {
           <meshBasicMaterial color="#d7e3e8" transparent opacity={0.35} toneMapped={false} />
         </RoundedBox>
       </group>
-      {/* 主衛 toilet in the 90 cm of the 150 bay, tank on the south wall */}
-      <group position={[1.922, 0, 2.341]}>
+      {/* 主衛 toilet in the 90 cm of the 150 bay, tank flush to partition-bath-top (was 2.341 / y≈530) */}
+      <group position={[1.922, 0, 2.68]}>
         <RigidBody type="fixed" colliders={false}>
           <CuboidCollider args={[0.2, 0.4, 0.26]} position={[0, 0.4, 0]} />
         </RigidBody>
