@@ -700,12 +700,40 @@ function PorcelainBasin() {
   );
 }
 
+function CuteShowerStall({ position, size }: { position: readonly [number, number]; size: readonly [number, number] }) {
+  const [width, depth] = size;
+  const glassH = 1.06;
+  return (
+    <group position={[position[0], 0, position[1]]}>
+      {/* stall volume so walk mode cannot step through the 淋浴間 */}
+      <RigidBody type="fixed" colliders={false}>
+        <CuboidCollider args={[width / 2, 0.9, depth / 2]} position={[0, 0.9, 0]} />
+      </RigidBody>
+      <RoundedBox position={[0, 0.03, 0]} args={[width, 0.06, depth]} radius={0.05} smoothness={4}>
+        <meshToonMaterial color="#e8eef2" gradientMap={toonGradient} toneMapped={false} />
+      </RoundedBox>
+      <RoundedBox position={[0, 0.048, 0]} args={[Math.max(0.2, width - 0.1), 0.02, Math.max(0.2, depth - 0.1)]} radius={0.04} smoothness={3}>
+        <meshBasicMaterial color="#d4e3e8" toneMapped={false} />
+      </RoundedBox>
+      {/* low cute glass on the west stall opening — matte pastel, no chrome */}
+      <RoundedBox position={[-(width / 2) + 0.018, glassH / 2, 0]} args={[0.032, glassH, Math.max(0.2, depth - 0.08)]} radius={0.03} smoothness={4}>
+        <meshBasicMaterial color="#c8dde4" transparent opacity={0.3} toneMapped={false} />
+      </RoundedBox>
+      <RoundedBox position={[-(width / 2) + 0.018, glassH + 0.018, 0]} args={[0.048, 0.036, Math.max(0.2, depth - 0.04)]} radius={0.016} smoothness={3}>
+        <meshBasicMaterial color="#d7e4ea" toneMapped={false} />
+      </RoundedBox>
+    </group>
+  );
+}
+
 function FixedBaths() {
   // World xz from I1A6-01/02 fixture symbols via A6_SHELL_V3 point() (6.825 m / 388.44 pt).
   // 主衛 150 bay south is partition-bath-top (y=563.76, z=2.940), not the east pipe-shelf at 549.6.
-  // Overlay: 150 bay = 60 sink + 90 toilet against that south wall; 80 east bay is the wet tray.
+  // Overlay: 150 bay = 60 sink + 90 toilet against that south wall; 80 east bay is the 淋浴間.
   // 客衛 interior x 351.96–437.52, y 569.4–647.88. Toilet oval is I1A6-02 p2 (412.5, 590.5),
   // against the north wall west of 管道間 — not inside the chase, not the old south-center seat.
+  // 客衛 淋浴間 uses the existing poche east of the toilet (no new wall):
+  // partition-bath-core 442.08 / partition-pipe-left 496.56 / pipe-bottom 591.48 / outer-bottom 647.88.
   return (
     <group>
       {/* 主衛 vanity 60×60, south-west of the 150 bay, flush to partition-bath-top */}
@@ -717,18 +745,8 @@ function FixedBaths() {
           <PorcelainBasin />
         </group>
       </group>
-      {/* 主衛 shower tray 80×115 in the east bay */}
-      <group position={[2.873, 0, 2.118]}>
-        <RigidBody type="fixed" colliders={false}>
-          <CuboidCollider args={[0.4, 0.06, 0.575]} position={[0, 0.06, 0]} />
-        </RigidBody>
-        <RoundedBox position={[0, 0.03, 0]} args={[0.8, 0.06, 1.15]} radius={0.04} smoothness={3}>
-          <meshToonMaterial color="#eef2f3" gradientMap={toonGradient} toneMapped={false} />
-        </RoundedBox>
-        <RoundedBox position={[-0.38, 0.95, 0]} args={[0.04, 1.9, 1.12]} radius={0.02} smoothness={3}>
-          <meshBasicMaterial color="#d7e3e8" transparent opacity={0.35} toneMapped={false} />
-        </RoundedBox>
-      </group>
+      {/* 主衛 淋浴間: I1A6-02 east 80 of the 240 / 115 deep. PDF ~[481.30, 484.32, 526.92, 549.6] → (2.873, 2.118). */}
+      <CuteShowerStall position={[2.873, 2.118]} size={[0.8, 1.15]} />
       {/* 主衛 toilet in the 90 cm of the 150 bay, tank flush to partition-bath-top (was 2.341 / y≈530) */}
       <group position={[1.922, 0, 2.68]}>
         <RigidBody type="fixed" colliders={false}>
@@ -752,6 +770,8 @@ function FixedBaths() {
         </RigidBody>
         <PorcelainToilet rotationY={Math.PI} />
       </group>
+      {/* 客衛 淋浴間: Julian east bay beside 管道間. PDF [442.08, 591.48, 496.56, 647.88] → (2.261, 3.923), 95.7×99.1. Not G11/b3. */}
+      <CuteShowerStall position={[2.261, 3.923]} size={[0.957, 0.991]} />
     </group>
   );
 }

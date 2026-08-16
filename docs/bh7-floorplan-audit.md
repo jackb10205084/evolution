@@ -98,7 +98,7 @@ A6 已升級為 `A6_SHELL_V3`：I1A6-01 左圖 poche 與門窗向量重抽，門
 | 建照／隔間 | p.2 `I1A6-01` | 全寬 682.5 cm 可確認。舊 3D 用 607.5 cm 當整戶深度不成立。V1 還漏了玄關隔間、陽台柱、多功能室右側隔間，並把 G15 70×100 畫成整面滑門。V2 門窗座標有估點。 |
 | 家具平面 | p.3 `I1A6-02` | 客餐廳、多功能室、主臥、雙衛浴、玄關與固定櫃位置可辨識。沙發圖註 100×230，runtime 仍用目錄 1560×840，不縮家具。廚房沿餐廳左牆（圖註深 65 cm，runtime x = −2.94 對得上），REF 在玄關。 |
 | 天花高度 | p.7 `I1A6-06` | 可見 CH220、CH225、CH235、CH263、CH285、CH290 等多個高度；現行統一 2.85 m 僅為互動碰撞用簡化，不是施工真高。 |
-| 3D 狀態 | `A6_SHELL_V3` | 外框含左陽台＋東側直帶右陽台。左陽台 220 cm 推拉門保留。右陽台＝444.12–534.24 × 137.04–325.08（南緣 partition-multi-master-right）；多功能室接到外北牆，已刪內北牆假門窗。outer-ac-block 在陽台上。南牆無 G11 窗（Julian vs 圖面印刷）。廚房／雙衛浴設備依 I1A6-02 符號放入（主衛馬桶靠 partition-bath-top；客衛馬桶對 overlay 橢圓，不在管道間）。寬度 6.825 m 為確認尺寸。等比暫定深度約 9.115 m，標註鏈加總 9.15 m，兩者都待 CAD 覆核。 |
+| 3D 狀態 | `A6_SHELL_V3` | 外框含左陽台＋東側直帶右陽台。左陽台 220 cm 推拉門保留。右陽台＝444.12–534.24 × 137.04–325.08（南緣 partition-multi-master-right）；多功能室接到外北牆，已刪內北牆假門窗。outer-ac-block 在陽台上。南牆無 G11 窗（Julian vs 圖面印刷）。廚房／雙衛浴設備依 I1A6-02 符號放入（主衛馬桶靠 partition-bath-top；客衛馬桶對 overlay 橢圓，不在管道間）。雙衛浴東側 bay 皆為淋浴間：主衛是 240 的東 80×115；客衛是馬桶以東、管道間西側既有 poche（partition-bath-core～pipe-left，pipe-bottom 以南），不是新牆，也不是 G11／b3 開口標註。寬度 6.825 m 為確認尺寸。等比暫定深度約 9.115 m，標註鏈加總 9.15 m，兩者都待 CAD 覆核。 |
 
 ## A11
 
@@ -126,10 +126,11 @@ World xz uses the same 6.825 m / 388.44 pt scale as `A6_SHELL_V3`. Layout follow
 | FixedKitchen / REF | 餐廳左牆 / 玄關 | (−2.94, 1.68) / REF z+1.82 | I1A6-02 65 深／120 爐槽 | built-in | West-wall run kept. No island / washer. |
 | dining-1675 | 餐廳 | (−2.43, 0.64) | I1A6-02 167.5 × 89.4 | built-in | Perpendicular to west wall, north of the 120 cook/sink run. Not catalog DME52. |
 | FixedBaths 主衛 vanity | 主衛 | (1.172, 2.640) | I1A6-02 60 mark, flush to partition-bath-top | built-in | Was (1.172, 2.391) against the east pipe-shelf line y=549.6. Same 60 bay; snapped to 主衛南隔間 y=563.76. |
-| FixedBaths 主衛 shower | 主衛 | (2.873, 2.118) | I1A6-02 80 east bay | built-in | Wet tray in the 80 bay (was wrongly in the 150). Unchanged. |
+| FixedBaths 主衛 shower | 主衛 | (2.873, 2.118) | I1A6-02 80 east bay of 240 / 115 deep; PDF ~[481.30, 484.32, 526.92, 549.6] | built-in | Enclosed 淋浴間: 80×115 tray + low pastel glass on the west opening. Toilet/sink stay on the west 150 bay. |
 | FixedBaths 主衛 toilet | 主衛 | (1.922, 2.680) | I1A6-02 90 of the 150 bay, tank on partition-bath-top | built-in | Was (1.922, 2.341) / PDF ≈(450, 530), floating mid-room against y=549.6. Now collider-flush to 主衛／客衛隔間 north face y=563.76 (z=2.940). Same X. Not the west ensuite wall, not a new bath. |
 | FixedBaths 客衛 sink | 客衛 | (0.507, 3.313) | I1A6-02 west / north wall | built-in | 60 cm off west wall. Unchanged bay. |
 | FixedBaths 客衛 toilet | 客衛 | (1.263, 3.410) | I1A6-01/02 oval p2 (412.5, 590.5) | built-in | Snapped to the drawing oval, north wall of 客衛, west of 管道間. Old (1.403, 3.739) was too south. Chase empty. |
+| FixedBaths 客衛 shower | 客衛 | (2.261, 3.923) | I1A6-01 poche [442.08, 591.48, 496.56, 647.88] (bath-core / pipe-left / pipe-bottom / south wall) | built-in | Enclosed 淋浴間 in the east bay Julian circled (east of toilet, beside 管道間). Bay 95.7×99.1 cm from existing poche; not G11 70×100, not b3 40×65. No new wall. |
 | table-dme52-1000 | — | parked (−1.70, 1.90) | removed from default | φ1000×750 | Not in the A6 完成方案. Deck uses a breakfast bar, not a meeting table. |
 | table-pebble | — | parked (−1.52, −1.05) | removed from default | 700×700×380 | Too big for the 50×75 coffee. Not a second coffee. |
 | shelf-cabin | — | add-spot (1.40, −2.80) | omitted | 1500×420×1650 | Too tall to stand in for the floating TV console; would read as a divider. |
