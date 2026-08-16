@@ -23,14 +23,13 @@ function wall(
   rect: readonly [number, number, number, number],
   kind: FloorplanWallSegment["kind"],
   view: FloorplanWallSegment["view"] = "cutaway",
-  height = wallHeight,
 ): FloorplanWallSegment {
   const [x0, y0, x1, y1] = rect;
   return {
     id,
     center: point((x0 + x1) / 2, (y0 + y1) / 2),
     size: [(x1 - x0) * scale, (y1 - y0) * scale],
-    height,
+    height: wallHeight,
     kind,
     view,
     sourceRect: rect,
@@ -104,14 +103,6 @@ const guestBathX0 = 346.32;
 const guestBathX1 = 351.96;
 const guestDoorY0 = 602.04;
 const guestDoorY1 = 647.4;
-// I1A6-01 right-sheet door leaf onto 右陽台, mapped to left coords (offset 498.727).
-// Closed leaf 431.51–434.39 × 149.52–199.44 = 49.92 pt = 87.7 cm. No labeled door width.
-const multiAcX0 = 435.6;
-const multiAcX1 = 444.12;
-const multiBalconyDoorY0 = 149.52;
-const multiBalconyDoorY1 = 199.44;
-const multiAcMidX = (multiAcX0 + multiAcX1) / 2;
-const parapetY1 = 145.56; // inner face of thin north double line (8.52 pt = 15 cm)
 
 const walls = [
   // Exterior / structural poche from I1A6-01. Openings are gaps in these runs.
@@ -123,9 +114,7 @@ const walls = [
   // L-shaped around 多功能室: G15 on the north, B9 on the east.
   // 多功能室 stays west of that partition and still meets the north outer wall
   // (x≈323–436, y=137–325). outer-ac-block sits ON the balcony.
-  // I1A6-01 right + I1A6-02 show a door leaf at the north of partition-multi-ac.
-  // 左陽台 north edge is a 15 cm 女兒牆 (thin double line), not a window.
-  wall("outer-balcony-parapet", [columnEast, 137.04, multiLeftX0, parapetY1], "outer", "full", 1.1),
+  // partition-multi-ac poche is continuous — I1A6-01/02 have no door into 右陽台.
   wall("outer-multi-top-west-jamb", [323.04, multiTopY0, multiWin70X0, multiTopY1], "outer", "full"),
   wall("outer-multi-top-between-glass-g15", [multiGlassX1, multiTopY0, g15X0, multiTopY1], "outer", "full"),
   wall("outer-multi-top-east", [g15X1, multiTopY0, rightX0, multiTopY1], "outer", "full"),
@@ -142,8 +131,7 @@ const walls = [
   wall("outer-pipe-block", [502.2, 570.84, 526.32, 647.4], "outer", "cutaway"),
 
   // Room boundaries: 多功能室 / 主臥 / 雙衛浴 / 管道間 / 玄關.
-  wall("partition-multi-ac-north-jamb", [multiAcX0, 145.08, multiAcX1, multiBalconyDoorY0], "partition"),
-  wall("partition-multi-ac-south", [multiAcX0, multiBalconyDoorY1, multiAcX1, 325.08], "partition"),
+  wall("partition-multi-ac", [435.6, 145.08, 444.12, 325.08], "partition"),
   wall("partition-spine-stub", [spineX0, 219.36, spineX1, multiDoorY0], "partition"),
   wall("partition-spine-upper", [spineX0, multiDoorY1, spineX1, masterDoorY0], "partition"),
   wall("partition-spine-lower", [spineX0, masterDoorY1, spineX1, 569.4], "partition"),
@@ -172,8 +160,6 @@ const openings = [
   opening("multi-north-glass", "window", [multiGlassX0, 141.3, multiGlassX1, 141.3], 0, 0.9, 1.0),
   opening("g15-window", "window", [g15X0, 141.3, g15X1, 141.3], 0, 0.9, 1.0),
   opening("b9-window", "window", [530.58, b9Y0, 530.58, b9Y1], Math.PI / 2, 0.9, 1.0),
-  // 多功能室 → 右陽台. Leaf 49.92 pt = 87.7 cm from I1A6-01 right / I1A6-02. Not 220.
-  opening("multi-balcony-door", "door", [multiAcMidX, multiBalconyDoorY0, multiAcMidX, multiBalconyDoorY1], Math.PI / 2, 0, 2.1, 0.15),
   opening("multi-entry-door", "door", [320.82, multiDoorY0, 320.82, multiDoorY1], Math.PI / 2, 0, 2.1, 0.1),
   opening("master-entry-door", "door", [320.82, masterDoorY0, 320.82, masterDoorY1], Math.PI / 2, 0, 2.1, 0.1),
   opening("ensuite-door", "door", [387.42, ensuiteDoorY0, 387.42, ensuiteDoorY1], Math.PI / 2, 0, 2.1, 0.1),
@@ -193,7 +179,7 @@ export const A6_SHELL_V3 = {
     pdf: "遠雄BH7樣品屋大樣圖 0718.pdf",
     drawingSet: "A6",
     pages: { dimensions: 2, furnishedPlan: 3, ceilingAndHeights: 7 },
-    caveat: "Walls and openings trace I1A6-01. 左陽台 is the living-north 130 cm band (220 cm slider). 右陽台 is the east vertical strip 444.12–534.24 × 137.04–325.08 (partition-multi-master-right is the south edge), L-shaped around 多功能室 with G15 north and B9 east. 多功能室 stays west of partition-multi-ac and still meets the north outer wall. outer-ac-block sits on 右陽台. partition-multi-ac is split for a 87.7 cm door (I1A6-01 right leaf 149.52–199.44) onto 右陽台; G15 stays the balcony north window. 左陽台 north edge is a 1.10 m 女兒牆 (15 cm poche). South envelope from the entry jamb to the east corner is solid wall (Julian: 下方不是窗是牆); printed G11 70×100 is not an opening in this shell. 682.5 cm width is labeled. Depth uses the same width scale (~9.115 m). Ceiling collision height 2.85 m is an interactive simplification.",
+    caveat: "Walls and openings trace I1A6-01. 左陽台 is the living-north 130 cm band (220 cm slider). 右陽台 is the east vertical strip 444.12–534.24 × 137.04–325.08 (partition-multi-master-right is the south edge), L-shaped around 多功能室 with G15 north and B9 east. 多功能室 stays west of partition-multi-ac and still meets the north outer wall. outer-ac-block sits on 右陽台. I1A6-01/02 have no door in partition-multi-ac. South envelope from the entry jamb to the east corner is solid wall (Julian: 下方不是窗是牆); printed G11 70×100 is not an opening in this shell. 682.5 cm width is labeled. Depth uses the same width scale (~9.115 m). Ceiling collision height 2.85 m is an interactive simplification.",
   },
   dimensions: { width, depth, wallHeight, outerWall: outer, partitionWall: 0.1 },
   footprint,
