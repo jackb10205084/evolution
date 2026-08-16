@@ -427,7 +427,7 @@ function ShellWall({ wall, wallColor, mode, auditMode }: { wall: FloorplanWallSe
   const displayHeight = auditMode
     ? 0.2
     : wall.view === "full"
-      ? (mode === "decorate" ? 2.06 : Math.min(wall.height, 2.2))
+      ? Math.min(wall.height, mode === "decorate" ? 2.06 : 2.2)
       : mode === "decorate"
         ? (wall.kind === "partition" ? 0.94 : 0.9)
         : (wall.kind === "partition" ? 0.38 : 0.3);
@@ -550,7 +550,7 @@ function FixedKitchen({ floorplanId }: { floorplanId: "bh7-a6" | "bh7-a11" }) {
       {/* 固定廚具碰撞體：散步模式不可穿越 */}
       <RigidBody type="fixed" colliders={false}>
         <CuboidCollider args={[0.34, 0.5, 1.2]} position={[0.02, 0.5, 0]} />
-        <CuboidCollider args={[0.33, 0.9, 0.34]} position={[0, 0.9, floorplanId === "bh7-a6" ? 1.82 : -1.52]} />
+        <CuboidCollider args={[0.33, 0.9, 0.34]} position={[0, 0.9, floorplanId === "bh7-a6" ? 0.935 : -1.52]} />
       </RigidBody>
       {/* 下櫃本體與踢腳（白門板，參考樣品屋） */}
       <RoundedBox position={[0, 0.46, 0]} args={[0.58, 0.78, 2.3]} radius={0.05} smoothness={4}>
@@ -574,33 +574,36 @@ function FixedKitchen({ floorplanId }: { floorplanId: "bh7-a6" | "bh7-a11" }) {
           </RoundedBox>
         </group>
       ))}
-      {/* 水槽與龍頭 */}
-      <RoundedBox position={[0.05, 0.918, -0.62]} args={[0.42, 0.028, 0.52]} radius={0.014} smoothness={3}>
-        <meshBasicMaterial color="#dde6ea" toneMapped={false} />
+      {/* 水槽：I1A6-02 在 120 南半、冰箱北側。凹盆＋龍頭，避免太平太白。 */}
+      <RoundedBox position={[0.05, 0.918, 0.3]} args={[0.44, 0.03, 0.5]} radius={0.016} smoothness={3}>
+        <meshBasicMaterial color="#c5d4da" toneMapped={false} />
       </RoundedBox>
-      <mesh position={[-0.17, 1.0, -0.62]}>
-        <cylinderGeometry args={[0.021, 0.026, 0.2, 12]} />
-        <meshBasicMaterial color="#9fb4c4" toneMapped={false} />
+      <RoundedBox position={[0.06, 0.9, 0.3]} args={[0.34, 0.05, 0.36]} radius={0.02} smoothness={3}>
+        <meshBasicMaterial color="#8aa0aa" toneMapped={false} />
+      </RoundedBox>
+      <mesh position={[-0.14, 1.02, 0.3]}>
+        <cylinderGeometry args={[0.022, 0.028, 0.22, 12]} />
+        <meshBasicMaterial color="#7d93a0" toneMapped={false} />
       </mesh>
-      <mesh position={[-0.1, 1.09, -0.62]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.018, 0.018, 0.17, 10]} />
-        <meshBasicMaterial color="#9fb4c4" toneMapped={false} />
+      <mesh position={[-0.06, 1.12, 0.3]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.018, 0.018, 0.18, 10]} />
+        <meshBasicMaterial color="#7d93a0" toneMapped={false} />
       </mesh>
-      {/* 黑色玻璃爐台（IH 爐） */}
-      <RoundedBox position={[0.05, 0.918, 0.62]} args={[0.44, 0.024, 0.56]} radius={0.014} smoothness={3}>
+      {/* 爐台在 120 北半，對 I1A6-02 雙圈 */}
+      <RoundedBox position={[0.05, 0.918, -0.3]} args={[0.44, 0.024, 0.56]} radius={0.014} smoothness={3}>
         <meshBasicMaterial color="#7c766f" toneMapped={false} />
       </RoundedBox>
-      {[0.44, 0.8].map((z) => (
+      {[-0.48, -0.12].map((z) => (
         <mesh key={`burner-${z}`} position={[0.05, 0.936, z]}>
           <cylinderGeometry args={[0.085, 0.085, 0.014, 24]} />
           <meshBasicMaterial color="#655854" toneMapped={false} />
         </mesh>
       ))}
-      {/* 抽油煙機（煙囪型，參考樣品屋） */}
-      <RoundedBox position={[-0.02, 1.62, 0.62]} args={[0.5, 0.09, 0.6]} radius={0.02} smoothness={3}>
+      {/* 抽油煙機跟爐台 */}
+      <RoundedBox position={[-0.02, 1.62, -0.3]} args={[0.5, 0.09, 0.6]} radius={0.02} smoothness={3}>
         <meshToonMaterial color="#ccd3d9" gradientMap={toonGradient} toneMapped={false} />
       </RoundedBox>
-      <RoundedBox position={[-0.1, 1.95, 0.62]} args={[0.26, 0.58, 0.3]} radius={0.02} smoothness={3}>
+      <RoundedBox position={[-0.1, 1.95, -0.3]} args={[0.26, 0.58, 0.3]} radius={0.02} smoothness={3}>
         <meshToonMaterial color="#d6dce1" gradientMap={toonGradient} toneMapped={false} />
       </RoundedBox>
       {/* 檯面小物：陶鍋與砧板 */}
@@ -631,19 +634,22 @@ function FixedKitchen({ floorplanId }: { floorplanId: "bh7-a6" | "bh7-a11" }) {
       <RoundedBox position={[-0.1, 2.12, -0.35]} args={[0.42, 0.16, 1.44]} radius={0.03} smoothness={3}>
         <meshToonMaterial color="#dcb98e" gradientMap={toonGradient} toneMapped={false} />
       </RoundedBox>
-      {/* 冰箱：A6 在玄關（I1A6-02 REF），A11 維持廚具端 */}
-      <group position={[0, 0, floorplanId === "bh7-a6" ? 1.82 : -1.52]}>
-        <RoundedBox position={[0, 0.9, 0]} args={[0.64, 1.78, 0.66]} radius={0.12} smoothness={5}>
-          <meshToonMaterial color="#f4eee1" gradientMap={toonGradient} toneMapped={false} />
+      {/* 冰箱：A6 在玄關牆北側（I1A6-02 REF 65），高盒對比，非第二台。 */}
+      <group position={[0, 0, floorplanId === "bh7-a6" ? 0.935 : -1.52]}>
+        <RoundedBox position={[0, 0.92, 0]} args={[0.64, 1.84, 0.66]} radius={0.06} smoothness={4}>
+          <meshToonMaterial color="#d5dde2" gradientMap={toonGradient} toneMapped={false} />
         </RoundedBox>
-        <mesh position={[0.31, 1.26, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <boxGeometry args={[0.014, 0.014, 0.6]} />
-          <meshBasicMaterial color="#e3dccb" toneMapped={false} />
+        <RoundedBox position={[0.3, 0.92, 0]} args={[0.04, 1.7, 0.58]} radius={0.02} smoothness={3}>
+          <meshToonMaterial color="#e8eef1" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+        <mesh position={[0.33, 1.28, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <boxGeometry args={[0.016, 0.016, 0.56]} />
+          <meshBasicMaterial color="#9aabb4" toneMapped={false} />
         </mesh>
-        {[1.44, 0.98].map((y) => (
+        {[1.48, 0.72].map((y) => (
           <group key={`fridge-handle-${y}`}>
-            <RoundedBox position={[0.33, y, 0.18]} args={[0.035, 0.2, 0.045]} radius={0.016} smoothness={3}>
-              <meshBasicMaterial color="#c4ccd3" toneMapped={false} />
+            <RoundedBox position={[0.35, y, 0.16]} args={[0.04, 0.22, 0.05]} radius={0.016} smoothness={3}>
+              <meshBasicMaterial color="#7d8c96" toneMapped={false} />
             </RoundedBox>
           </group>
         ))}
