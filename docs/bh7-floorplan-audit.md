@@ -12,7 +12,7 @@ A6 已升級為 `A6_SHELL_V3`：I1A6-01 左圖 poche 與門窗向量重抽，門
 - 彩色牆體與家具：目前 Web 3D runtime。
 - 寬度：依圖面標註 682.5 cm 校正。
 - 深度：目前按 PDF 圖面比例暫置（約 9.115 m）。圖面左右垂直尺寸鏈加總各為 915 cm，但圖上沒有單一總深標註，兩者皆待 CAD 覆核。
-- 北側 130 cm 帶：左 227.5 外段為客廳陽台（220 cm 推拉門）。右陽台是 partition-multi-ac 以東的整條東側直帶（PDF 444.12–534.24 × 137.04–325.08，南緣為 partition-multi-master-right），繞多功能室呈 L：北 G15、東 B9。多功能室仍在該隔間以西並接到外北牆（x≈323–436，y=137–325）。outer-ac-block 坐在陽台上。I1A6-01/02 的 partition-multi-ac 仍為連續 poche，無門。主臥東北 partition-multi-master-right 圖面為 2.5+140+2.5 組件（西固定玻璃＋東平開門）；本輪只開東門（sourceSpan 487.44–522.60，葉約 61.8 cm），西玻璃暫留實牆。140 標註是整組不是門扇。南牆入口右側至東角為實牆；圖面印有 G11 70×100，依 Julian「下方不是窗是牆」不開窗。
+- 北側 130 cm 帶：左 227.5 外段為客廳陽台（220 cm 推拉門）。右陽台是 partition-multi-ac 以東的整條東側直帶（PDF 444.12–534.24 × 137.04–325.08，南緣為 partition-multi-master-right），繞多功能室呈 L：北 G15。Julian：右陽台右邊沒有開窗；圖面印有 B9 70×100，與 G11 同類，不是開口。多功能室仍在該隔間以西並接到外北牆（x≈323–436，y=137–325）。outer-ac-block 坐在陽台上。I1A6-01/02 的 partition-multi-ac 仍為連續 poche，無門。主臥東北 partition-multi-master-right 圖面為 2.5+140+2.5 組件（西固定玻璃＋東平開門）；本輪只開東門（sourceSpan 487.44–522.60，葉約 61.8 cm），西玻璃暫留實牆。140 標註是整組不是門扇。南牆入口右側至東角為實牆；圖面印有 G11 70×100，依 Julian「下方不是窗是牆」不開窗。
 
 ## A6 已追蹤的標註（I1A6-01 右圖，cm）
 
@@ -40,7 +40,7 @@ A6 已升級為 `A6_SHELL_V3`：I1A6-01 左圖 poche 與門窗向量重抽，門
 | outer-balcony-sill | p.2 | [146.40, 210.84, 188.95, 219.36] | 左檻至推拉門 | 7.5 檻 | 柱東緣 184.68 + 7.5 cm |
 | outer-multi-left | p.2 | [315.12, 137.04, 323.64, 219.36] | 0.150 × 1.447 | 15 / 18.9 | 18.9 為頂鏈含飾面，向量約 15.0 |
 | outer-multi-top-* | p.2 | y 137.64–145.08，於 325.80 / 431.28 / 448.98 / 488.82 切開 | — | 見窗 | 北牆在 70 cm 窗、115 cm 玻璃、G15 處留缺口 |
-| outer-right-* | p.2 | x 526.92–534.24，於 y 217.72–257.56 切開 | — | B9 70 | 右牆連續 poche，B9 為窗洞 |
+| outer-right | p.2 | [526.92, 137.64, 534.24, 655.32] | — | 東牆實牆 | I1A6-01 RE 連續 poche。Julian：右陽台右邊沒有開窗。printed B9 70×100 不是開口（與 G11 同類） |
 | outer-ac-block | p.2 | [493.68, 145.08, 526.32, 210.84] | 空調外箱 | 72.5 頂鏈段；坐在右陽台上的室外機，不是獨立「空調」房間 |
 | outer-left-* | p.2 | x 146.40–154.92 | 約 15 | 15 | 上／轉角／下三段 |
 | outer-bottom-left-jamb | p.2 | [146.40, 647.88, 171.96, 655.80] | 左檻 | 45 外段 | 門檻向量 171.96 |
@@ -71,7 +71,7 @@ A6 已升級為 `A6_SHELL_V3`：I1A6-01 左圖 poche 與門窗向量重抽，門
 | multi-north-window | p.2 | [325.80, 141.30, 365.52, 141.30] | 0.698 | 無 G 編號 | 向量 69.8 cm，外推窗扇。多功能室北窗（室內接到外牆） |
 | multi-north-glass | p.2 | [365.52, 141.30, 431.28, 141.30] | 1.155 | 無 | 雙線玻璃，**不是**整面滑門 |
 | g15-window | p.2 | [448.98, 141.30, 488.82, 141.30] | 0.700 | G15 70×100 | 虛線開口 444.12–493.68 = 87.1 cm；長度用 70，位置取虛線中心 |
-| b9-window | p.2 | [530.58, 217.72, 530.58, 257.56] | 0.700 | B9 70×100 | 標註 bbox y 218.48–256.80 |
+| b9-window | — | 已刪 | — | 圖面 B9 70×100 | Julian：右陽台右邊沒有開窗。東牆改實牆，不另開窗（與 G11 同類） |
 | g11-window | — | 已刪 | — | 圖面 G11 70×100 | Julian：下方不是窗是牆。南牆改實牆，不另開窗 |
 | multi-entry-door | p.2 | [320.82, 222.36, 320.82, 276.00] | 0.942 | 無門寬標 | 脊牆缺口 |
 | master-entry-door | p.2 | [320.82, 469.08, 320.82, 516.72] | 0.837 | 84 | 向量 83.7，差 0.3 cm |
@@ -89,7 +89,7 @@ A6 已升級為 `A6_SHELL_V3`：I1A6-01 左圖 poche 與門窗向量重抽，門
 | 客廳陽台推拉門 | x 154.9–315.1 | 188.95–314.16（柱 + 7.5 + 220） | 左緣侵入陽台柱約 59.8 cm |
 | 多功能室北窗 | x 359.6–399.4（估 70） | 325.80–365.52 與 365.52–431.28 | 東偏約 59 cm；漏了 115 cm 玻璃 |
 | G15 | 未獨立（被北窗取代） | 空調頂牆中心 70 cm | V2 沒有空調頂窗 |
-| B9 | y 157.6–197.4（空調箱內） | y 217.72–257.56（標註位置） | 北偏約 105.7 cm |
+| B9 | y 157.6–197.4（空調箱內） | 已刪（printed label，不是開口） | V2 當窗；V3 依 Julian 關窗 |
 | G11 | x 450.1–489.9 | x 443.14–482.98 | 東偏約 12.2 cm |
 | 玄關門檻 | 171.7 / 234.3 | 171.96 / 234.36 | 約 0.5 cm |
 
@@ -98,9 +98,9 @@ A6 已升級為 `A6_SHELL_V3`：I1A6-01 左圖 poche 與門窗向量重抽，門
 | 項目 | 來源 | 稽核結果 |
 | --- | --- | --- |
 | 建照／隔間 | p.2 `I1A6-01` | 全寬 682.5 cm 可確認。舊 3D 用 607.5 cm 當整戶深度不成立。V1 還漏了玄關隔間、陽台柱、多功能室右側隔間，並把 G15 70×100 畫成整面滑門。V2 門窗座標有估點。 |
-| 家具平面 | p.3 `I1A6-02` | 客餐廳、多功能室、主臥、雙衛浴、玄關與固定櫃位置可辨識。沙發圖註 100×230，runtime 仍用目錄 1560×840，不縮家具。廚房沿餐廳左牆（圖註深 65 cm，runtime x = −2.94 對得上），REF 在玄關。 |
+| 家具平面 | p.3 `I1A6-02` | 客餐廳、多功能室、主臥、雙衛浴、玄關與固定櫃位置可辨識。沙發圖註 100×230，runtime 仍用目錄 1560×840，不縮家具。廚房為 C 字（東開）：北 167.5 吧台（−2.43, 0.64）、西爐台 0.65×1.21（−2.94, 1.69，爐在北半 1.54）、南迴 1.19×0.65（−2.66, 2.62）上水槽（−2.42, 2.59）與 REF（−1.72, 2.57，玄關隔間北、隔間東端）。無中島／洗衣機／第二台冰箱／凳（圖有凳無 SKU）。 |
 | 天花高度 | p.7 `I1A6-06` | 可見 CH220、CH225、CH235、CH263、CH285、CH290 等多個高度；現行統一 2.85 m 僅為互動碰撞用簡化，不是施工真高。 |
-| 3D 狀態 | `A6_SHELL_V3` | 外框含左陽台＋東側直帶右陽台。左陽台 220 cm 推拉門保留。右陽台＝444.12–534.24 × 137.04–325.08（南緣 partition-multi-master-right，已切開東門）；多功能室接到外北牆，已刪內北牆假門窗。outer-ac-block 在陽台上。主臥東北橫牆東門（487.44–522.60）由下往上進右陽台；西固定玻璃暫留實牆。partition-multi-ac 仍連續無門。南牆無 G11 窗（Julian vs 圖面印刷）。廚房／雙衛浴設備依 I1A6-02 符號放入（主衛馬桶靠 partition-bath-top；客衛馬桶對 overlay 橢圓，不在管道間）。雙衛浴東側 bay 皆為淋浴間：主衛是 240 的東 80×115；客衛是馬桶以東、管道間西側既有 poche（partition-bath-core～pipe-left，pipe-bottom 以南），不是新牆，也不是 G11／b3 開口標註。寬度 6.825 m 為確認尺寸。等比暫定深度約 9.115 m，標註鏈加總 9.15 m，兩者都待 CAD 覆核。 |
+| 3D 狀態 | `A6_SHELL_V3` | 外框含左陽台＋東側直帶右陽台。左陽台 220 cm 推拉門保留。右陽台＝444.12–534.24 × 137.04–325.08（南緣 partition-multi-master-right，已切開東門）；多功能室接到外北牆，已刪內北牆假門窗。outer-ac-block 在陽台上。主臥東北橫牆東門（487.44–522.60）由下往上進右陽台；西固定玻璃暫留實牆。partition-multi-ac 仍連續無門。東牆無 B9 窗、南牆無 G11 窗（Julian vs 圖面印刷）。廚房為 I1A6-02 C 字（北吧台／西爐／南水槽冰箱）。雙衛浴設備依 I1A6-02 符號放入（主衛馬桶靠 partition-bath-top；客衛馬桶對 overlay 橢圓，不在管道間）。雙衛浴東側 bay 皆為淋浴間：主衛是 240 的東 80×115；客衛是馬桶以東、管道間西側既有 poche（partition-bath-core～pipe-left，pipe-bottom 以南），不是新牆，也不是 G11／b3 開口標註。寬度 6.825 m 為確認尺寸。等比暫定深度約 9.115 m，標註鏈加總 9.15 m，兩者都待 CAD 覆核。 |
 
 ## A11
 
@@ -125,8 +125,8 @@ World xz uses the same 6.825 m / 388.44 pt scale as `A6_SHELL_V3`. Layout follow
 | lamp-moon | 客廳 | −2.96, −2.90 | p20 window light | 450×450×1550 | Living balcony-window corner. |
 | plant-olive | 客廳 | −2.20, −2.78 | p20 window light | 720×720×1650 | Living window corner, inside the slider. |
 | bed-soft | 主臥 | 1.72, 0.30 | p13–p14 headboard wall | 1820×2080×880 | Centered on the interior headboard wall toward bath (+Z). West door kept clear. |
-| FixedKitchen / REF | 餐廳左牆 / 玄關 | (−2.94, 1.68) / REF z+1.82 | I1A6-02 65 深／120 爐槽 | built-in | West-wall run kept. No island / washer. |
-| dining-1675 | 餐廳 | (−2.43, 0.64) | I1A6-02 167.5 × 89.4 | built-in | Perpendicular to west wall, north of the 120 cook/sink run. Not catalog DME52. |
+| FixedKitchen / REF | 餐廳 C 字 | west (−2.94, 1.69)／south (−2.66, 2.62)／sink (−2.42, 2.59)／REF (−1.72, 2.57) | I1A6-02 C：西爐 0.65×1.21、南迴 1.19×0.65、REF ~0.70×0.75 | built-in | Cooktop on west NORTH half (1.54). Sink on south return. REF east of sink, north of 玄關隔間, east=262.68. No island / washer / second fridge / stools. |
+| dining-1675 | 餐廳 | (−2.43, 0.64) | I1A6-02 167.5 × 89.4／p.2 [155.04, 407.64, 249.36, 458.28] | built-in | North bar of the kitchen C. Already correct — kept. Not catalog DME52. |
 | FixedBaths 主衛 vanity | 主衛 | (1.172, 2.640) | I1A6-02 60 mark, flush to partition-bath-top | built-in | Was (1.172, 2.391) against the east pipe-shelf line y=549.6. Same 60 bay; snapped to 主衛南隔間 y=563.76. |
 | FixedBaths 主衛 shower | 主衛 | (2.873, 2.118) | I1A6-02 80 east bay of 240 / 115 deep; PDF ~[481.30, 484.32, 526.92, 549.6] | built-in | Enclosed 淋浴間: 80×115 tray + low pastel glass on the west opening. Toilet/sink stay on the west 150 bay. |
 | FixedBaths 主衛 toilet | 主衛 | (1.922, 2.680) | I1A6-02 90 of the 150 bay, tank on partition-bath-top | built-in | Was (1.922, 2.341) / PDF ≈(450, 530), floating mid-room against y=549.6. Now collider-flush to 主衛／客衛隔間 north face y=563.76 (z=2.940). Same X. Not the west ensuite wall, not a new bath. |

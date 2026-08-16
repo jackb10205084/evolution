@@ -543,125 +543,245 @@ function ShellOpening({ opening, mode, wallColor, skyColor, auditMode }: { openi
 }
 
 function FixedKitchen({ floorplanId }: { floorplanId: "bh7-a6" | "bh7-a11" }) {
-  const position: [number, number, number] = floorplanId === "bh7-a11" ? [-2.35, 0, -2.78] : [-2.94, 0, 1.68];
-  const rotation: [number, number, number] = floorplanId === "bh7-a11" ? [0, Math.PI / 2, 0] : [0, 0, 0];
-  return (
-    <group position={position} rotation={rotation}>
-      {/* 固定廚具碰撞體：散步模式不可穿越 */}
-      <RigidBody type="fixed" colliders={false}>
-        <CuboidCollider args={[0.34, 0.5, 1.2]} position={[0.02, 0.5, 0]} />
-        <CuboidCollider args={[0.33, 0.9, 0.34]} position={[0, 0.9, floorplanId === "bh7-a6" ? 1.82 : -1.52]} />
-      </RigidBody>
-      {/* 下櫃本體與踢腳（白門板，參考樣品屋） */}
-      <RoundedBox position={[0, 0.46, 0]} args={[0.58, 0.78, 2.3]} radius={0.05} smoothness={4}>
-        <meshToonMaterial color="#f6f2ea" gradientMap={toonGradient} toneMapped={false} />
-      </RoundedBox>
-      <RoundedBox position={[0.01, 0.06, 0]} args={[0.54, 0.12, 2.24]} radius={0.03} smoothness={3}>
-        <meshBasicMaterial color="#ddd6ca" toneMapped={false} />
-      </RoundedBox>
-      {/* 灰色石英檯面 */}
-      <RoundedBox position={[0.03, 0.88, 0]} args={[0.66, 0.07, 2.4]} radius={0.032} smoothness={4}>
-        <meshToonMaterial color="#b6b1a8" gradientMap={toonGradient} toneMapped={false} />
-      </RoundedBox>
-      {/* 白色門板與橫向把手 */}
-      {[-0.76, 0, 0.76].map((z) => (
-        <group key={`door-${z}`}>
-          <RoundedBox position={[0.3, 0.45, z]} args={[0.025, 0.6, 0.62]} radius={0.012} smoothness={3}>
+  if (floorplanId === "bh7-a11") {
+    return (
+      <group position={[-2.35, 0, -2.78]} rotation={[0, Math.PI / 2, 0]}>
+        <RigidBody type="fixed" colliders={false}>
+          <CuboidCollider args={[0.34, 0.5, 1.2]} position={[0.02, 0.5, 0]} />
+          <CuboidCollider args={[0.33, 0.9, 0.34]} position={[0, 0.9, -1.52]} />
+        </RigidBody>
+        <RoundedBox position={[0, 0.46, 0]} args={[0.58, 0.78, 2.3]} radius={0.05} smoothness={4}>
+          <meshToonMaterial color="#f6f2ea" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+        <RoundedBox position={[0.01, 0.06, 0]} args={[0.54, 0.12, 2.24]} radius={0.03} smoothness={3}>
+          <meshBasicMaterial color="#ddd6ca" toneMapped={false} />
+        </RoundedBox>
+        <RoundedBox position={[0.03, 0.88, 0]} args={[0.66, 0.07, 2.4]} radius={0.032} smoothness={4}>
+          <meshToonMaterial color="#b6b1a8" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+        {[-0.76, 0, 0.76].map((z) => (
+          <group key={`door-${z}`}>
+            <RoundedBox position={[0.3, 0.45, z]} args={[0.025, 0.6, 0.62]} radius={0.012} smoothness={3}>
+              <meshToonMaterial color="#fbf8f2" gradientMap={toonGradient} toneMapped={false} />
+            </RoundedBox>
+            <RoundedBox position={[0.325, 0.66, z]} args={[0.022, 0.035, 0.24]} radius={0.01} smoothness={3}>
+              <meshBasicMaterial color="#b9c2cb" toneMapped={false} />
+            </RoundedBox>
+          </group>
+        ))}
+        <RoundedBox position={[0.05, 0.918, -0.62]} args={[0.42, 0.028, 0.52]} radius={0.014} smoothness={3}>
+          <meshBasicMaterial color="#dde6ea" toneMapped={false} />
+        </RoundedBox>
+        <mesh position={[-0.17, 1.0, -0.62]}>
+          <cylinderGeometry args={[0.021, 0.026, 0.2, 12]} />
+          <meshBasicMaterial color="#9fb4c4" toneMapped={false} />
+        </mesh>
+        <mesh position={[-0.1, 1.09, -0.62]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.018, 0.018, 0.17, 10]} />
+          <meshBasicMaterial color="#9fb4c4" toneMapped={false} />
+        </mesh>
+        <RoundedBox position={[0.05, 0.918, 0.62]} args={[0.44, 0.024, 0.56]} radius={0.014} smoothness={3}>
+          <meshBasicMaterial color="#7c766f" toneMapped={false} />
+        </RoundedBox>
+        {[0.44, 0.8].map((z) => (
+          <mesh key={`burner-${z}`} position={[0.05, 0.936, z]}>
+            <cylinderGeometry args={[0.085, 0.085, 0.014, 24]} />
+            <meshBasicMaterial color="#655854" toneMapped={false} />
+          </mesh>
+        ))}
+        <RoundedBox position={[-0.02, 1.62, 0.62]} args={[0.5, 0.09, 0.6]} radius={0.02} smoothness={3}>
+          <meshToonMaterial color="#ccd3d9" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+        <RoundedBox position={[-0.1, 1.95, 0.62]} args={[0.26, 0.58, 0.3]} radius={0.02} smoothness={3}>
+          <meshToonMaterial color="#d6dce1" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+        <mesh position={[0.05, 0.95, 0.08]}>
+          <cylinderGeometry args={[0.085, 0.095, 0.09, 20]} />
+          <meshToonMaterial color="#df8f78" gradientMap={toonGradient} toneMapped={false} />
+        </mesh>
+        <mesh position={[0.05, 1.0, 0.08]}>
+          <sphereGeometry args={[0.088, 20, 12]} />
+          <meshToonMaterial color="#e8a58d" gradientMap={toonGradient} toneMapped={false} />
+        </mesh>
+        <RoundedBox position={[0.04, 0.93, -0.24]} args={[0.3, 0.02, 0.2]} radius={0.01} smoothness={3} rotation={[0, 0.2, 0]}>
+          <meshToonMaterial color="#d9b58c" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+        <RoundedBox position={[-0.275, 1.2, 0]} args={[0.03, 0.58, 2.3]} radius={0.014} smoothness={3}>
+          <meshBasicMaterial color="#eceeed" toneMapped={false} />
+        </RoundedBox>
+        <RoundedBox position={[-0.13, 1.76, -0.35]} args={[0.34, 0.56, 1.35]} radius={0.04} smoothness={4}>
+          <meshToonMaterial color="#f6f2ea" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+        {[-0.86, -0.42, 0.02].map((z) => (
+          <RoundedBox key={`upper-door-${z}`} position={[0.045, 1.76, z + 0.28]} args={[0.02, 0.5, 0.42]} radius={0.01} smoothness={3}>
             <meshToonMaterial color="#fbf8f2" gradientMap={toonGradient} toneMapped={false} />
           </RoundedBox>
-          <RoundedBox position={[0.325, 0.66, z]} args={[0.022, 0.035, 0.24]} radius={0.01} smoothness={3}>
-            <meshBasicMaterial color="#b9c2cb" toneMapped={false} />
-          </RoundedBox>
-        </group>
-      ))}
-      {/* 水槽與龍頭 */}
-      <RoundedBox position={[0.05, 0.918, -0.62]} args={[0.42, 0.028, 0.52]} radius={0.014} smoothness={3}>
-        <meshBasicMaterial color="#dde6ea" toneMapped={false} />
-      </RoundedBox>
-      <mesh position={[-0.17, 1.0, -0.62]}>
-        <cylinderGeometry args={[0.021, 0.026, 0.2, 12]} />
-        <meshBasicMaterial color="#9fb4c4" toneMapped={false} />
-      </mesh>
-      <mesh position={[-0.1, 1.09, -0.62]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.018, 0.018, 0.17, 10]} />
-        <meshBasicMaterial color="#9fb4c4" toneMapped={false} />
-      </mesh>
-      {/* 黑色玻璃爐台（IH 爐） */}
-      <RoundedBox position={[0.05, 0.918, 0.62]} args={[0.44, 0.024, 0.56]} radius={0.014} smoothness={3}>
-        <meshBasicMaterial color="#7c766f" toneMapped={false} />
-      </RoundedBox>
-      {[0.44, 0.8].map((z) => (
-        <mesh key={`burner-${z}`} position={[0.05, 0.936, z]}>
-          <cylinderGeometry args={[0.085, 0.085, 0.014, 24]} />
-          <meshBasicMaterial color="#655854" toneMapped={false} />
-        </mesh>
-      ))}
-      {/* 抽油煙機（煙囪型，參考樣品屋） */}
-      <RoundedBox position={[-0.02, 1.62, 0.62]} args={[0.5, 0.09, 0.6]} radius={0.02} smoothness={3}>
-        <meshToonMaterial color="#ccd3d9" gradientMap={toonGradient} toneMapped={false} />
-      </RoundedBox>
-      <RoundedBox position={[-0.1, 1.95, 0.62]} args={[0.26, 0.58, 0.3]} radius={0.02} smoothness={3}>
-        <meshToonMaterial color="#d6dce1" gradientMap={toonGradient} toneMapped={false} />
-      </RoundedBox>
-      {/* 檯面小物：陶鍋與砧板 */}
-      <mesh position={[0.05, 0.95, 0.08]}>
-        <cylinderGeometry args={[0.085, 0.095, 0.09, 20]} />
-        <meshToonMaterial color="#df8f78" gradientMap={toonGradient} toneMapped={false} />
-      </mesh>
-      <mesh position={[0.05, 1.0, 0.08]}>
-        <sphereGeometry args={[0.088, 20, 12]} />
-        <meshToonMaterial color="#e8a58d" gradientMap={toonGradient} toneMapped={false} />
-      </mesh>
-      <RoundedBox position={[0.04, 0.93, -0.24]} args={[0.3, 0.02, 0.2]} radius={0.01} smoothness={3} rotation={[0, 0.2, 0]}>
-        <meshToonMaterial color="#d9b58c" gradientMap={toonGradient} toneMapped={false} />
-      </RoundedBox>
-      {/* 淺灰背牆板 */}
-      <RoundedBox position={[-0.275, 1.2, 0]} args={[0.03, 0.58, 2.3]} radius={0.014} smoothness={3}>
-        <meshBasicMaterial color="#eceeed" toneMapped={false} />
-      </RoundedBox>
-      {/* 白色吊櫃＋上方木質收邊 */}
-      <RoundedBox position={[-0.13, 1.76, -0.35]} args={[0.34, 0.56, 1.35]} radius={0.04} smoothness={4}>
-        <meshToonMaterial color="#f6f2ea" gradientMap={toonGradient} toneMapped={false} />
-      </RoundedBox>
-      {[-0.86, -0.42, 0.02].map((z) => (
-        <RoundedBox key={`upper-door-${z}`} position={[0.045, 1.76, z + 0.28]} args={[0.02, 0.5, 0.42]} radius={0.01} smoothness={3}>
-          <meshToonMaterial color="#fbf8f2" gradientMap={toonGradient} toneMapped={false} />
+        ))}
+        <RoundedBox position={[-0.1, 2.12, -0.35]} args={[0.42, 0.16, 1.44]} radius={0.03} smoothness={3}>
+          <meshToonMaterial color="#dcb98e" gradientMap={toonGradient} toneMapped={false} />
         </RoundedBox>
-      ))}
-      <RoundedBox position={[-0.1, 2.12, -0.35]} args={[0.42, 0.16, 1.44]} radius={0.03} smoothness={3}>
-        <meshToonMaterial color="#dcb98e" gradientMap={toonGradient} toneMapped={false} />
-      </RoundedBox>
-      {/* 冰箱：A6 在玄關（I1A6-02 REF），A11 維持廚具端 */}
-      <group position={[0, 0, floorplanId === "bh7-a6" ? 1.82 : -1.52]}>
-        <RoundedBox position={[0, 0.9, 0]} args={[0.64, 1.78, 0.66]} radius={0.12} smoothness={5}>
+        <group position={[0, 0, -1.52]}>
+          <RoundedBox position={[0, 0.9, 0]} args={[0.64, 1.78, 0.66]} radius={0.12} smoothness={5}>
+            <meshToonMaterial color="#f4eee1" gradientMap={toonGradient} toneMapped={false} />
+          </RoundedBox>
+          <mesh position={[0.31, 1.26, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <boxGeometry args={[0.014, 0.014, 0.6]} />
+            <meshBasicMaterial color="#e3dccb" toneMapped={false} />
+          </mesh>
+          {[1.44, 0.98].map((y) => (
+            <group key={`fridge-handle-${y}`}>
+              <RoundedBox position={[0.33, y, 0.18]} args={[0.035, 0.2, 0.045]} radius={0.016} smoothness={3}>
+                <meshBasicMaterial color="#c4ccd3" toneMapped={false} />
+              </RoundedBox>
+            </group>
+          ))}
+        </group>
+      </group>
+    );
+  }
+
+  // I1A6-02 kitchen C, opens east. Drawing-true world xz (6.825/388.44).
+  // North 167.5 bar (−2.43, 0.64) already correct — keep.
+  // West stove 0.65×1.21 at (−2.94, 1.69), cooktop on NORTH half (−2.94, 1.54).
+  // South return 1.19×0.65 at (−2.66, 2.62), sink (−2.42, 2.59), REF (−1.72, 2.57).
+  // West flush outer-left inner x=154.92; south flush partition-entry-dining y=563.76;
+  // REF east = partition east 262.68. No island / washer / second fridge / stools.
+  // Heights unlabeled: keep counter 0.88 / REF 1.78 / bar 0.70.
+  return (
+    <group>
+      <RigidBody type="fixed" colliders={false}>
+        <CuboidCollider args={[0.325, 0.44, 0.605]} position={[-2.94, 0.44, 1.69]} />
+        <CuboidCollider args={[0.595, 0.44, 0.325]} position={[-2.66, 0.44, 2.62]} />
+        <CuboidCollider args={[0.35, 0.89, 0.375]} position={[-1.72, 0.89, 2.57]} />
+        <CuboidCollider args={[0.838, 0.38, 0.447]} position={[-2.43, 0.38, 0.64]} />
+      </RigidBody>
+
+      {/* West stove run: 0.65 × 1.21 along west wall */}
+      <group position={[-2.94, 0, 1.69]}>
+        <RoundedBox position={[0, 0.46, 0]} args={[0.58, 0.78, 1.15]} radius={0.05} smoothness={4}>
+          <meshToonMaterial color="#f6f2ea" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+        <RoundedBox position={[0.01, 0.06, 0]} args={[0.54, 0.12, 1.1]} radius={0.03} smoothness={3}>
+          <meshBasicMaterial color="#ddd6ca" toneMapped={false} />
+        </RoundedBox>
+        <RoundedBox position={[0.03, 0.88, 0]} args={[0.65, 0.07, 1.21]} radius={0.032} smoothness={4}>
+          <meshToonMaterial color="#b6b1a8" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+        {[-0.28, 0.28].map((z) => (
+          <group key={`west-door-${z}`}>
+            <RoundedBox position={[0.3, 0.45, z]} args={[0.025, 0.6, 0.5]} radius={0.012} smoothness={3}>
+              <meshToonMaterial color="#fbf8f2" gradientMap={toonGradient} toneMapped={false} />
+            </RoundedBox>
+            <RoundedBox position={[0.325, 0.66, z]} args={[0.022, 0.035, 0.2]} radius={0.01} smoothness={3}>
+              <meshBasicMaterial color="#b9c2cb" toneMapped={false} />
+            </RoundedBox>
+          </group>
+        ))}
+        {/* cooktop on NORTH half (local z −0.15 → world z 1.54) */}
+        <RoundedBox position={[0.03, 0.918, -0.15]} args={[0.52, 0.024, 0.34]} radius={0.014} smoothness={3}>
+          <meshBasicMaterial color="#7c766f" toneMapped={false} />
+        </RoundedBox>
+        {[-0.1, 0.1].map((x) => (
+          <mesh key={`burner-${x}`} position={[x, 0.936, -0.15]}>
+            <cylinderGeometry args={[0.07, 0.07, 0.014, 24]} />
+            <meshBasicMaterial color="#655854" toneMapped={false} />
+          </mesh>
+        ))}
+        <RoundedBox position={[-0.02, 1.62, -0.15]} args={[0.5, 0.09, 0.42]} radius={0.02} smoothness={3}>
+          <meshToonMaterial color="#ccd3d9" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+        <RoundedBox position={[-0.1, 1.95, -0.15]} args={[0.26, 0.58, 0.28]} radius={0.02} smoothness={3}>
+          <meshToonMaterial color="#d6dce1" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+        <mesh position={[0.04, 0.95, 0.28]}>
+          <cylinderGeometry args={[0.085, 0.095, 0.09, 20]} />
+          <meshToonMaterial color="#df8f78" gradientMap={toonGradient} toneMapped={false} />
+        </mesh>
+        <mesh position={[0.04, 1.0, 0.28]}>
+          <sphereGeometry args={[0.088, 20, 12]} />
+          <meshToonMaterial color="#e8a58d" gradientMap={toonGradient} toneMapped={false} />
+        </mesh>
+        <RoundedBox position={[-0.275, 1.2, 0]} args={[0.03, 0.58, 1.15]} radius={0.014} smoothness={3}>
+          <meshBasicMaterial color="#eceeed" toneMapped={false} />
+        </RoundedBox>
+        <RoundedBox position={[-0.13, 1.76, 0]} args={[0.34, 0.56, 1.05]} radius={0.04} smoothness={4}>
+          <meshToonMaterial color="#f6f2ea" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+        {[-0.28, 0.28].map((z) => (
+          <RoundedBox key={`west-upper-${z}`} position={[0.045, 1.76, z]} args={[0.02, 0.5, 0.42]} radius={0.01} smoothness={3}>
+            <meshToonMaterial color="#fbf8f2" gradientMap={toonGradient} toneMapped={false} />
+          </RoundedBox>
+        ))}
+        <RoundedBox position={[-0.1, 2.12, 0]} args={[0.42, 0.16, 1.12]} radius={0.03} smoothness={3}>
+          <meshToonMaterial color="#dcb98e" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+      </group>
+
+      {/* South return: 1.19 × 0.65 along 玄關隔間, sink on it */}
+      <group position={[-2.66, 0, 2.62]}>
+        <RoundedBox position={[0, 0.46, 0]} args={[1.13, 0.78, 0.58]} radius={0.05} smoothness={4}>
+          <meshToonMaterial color="#f6f2ea" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+        <RoundedBox position={[0, 0.06, 0.01]} args={[1.08, 0.12, 0.54]} radius={0.03} smoothness={3}>
+          <meshBasicMaterial color="#ddd6ca" toneMapped={false} />
+        </RoundedBox>
+        <RoundedBox position={[0, 0.88, 0.03]} args={[1.19, 0.07, 0.65]} radius={0.032} smoothness={4}>
+          <meshToonMaterial color="#b6b1a8" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+        {[-0.28, 0.28].map((x) => (
+          <group key={`south-door-${x}`}>
+            <RoundedBox position={[x, 0.45, -0.3]} args={[0.5, 0.6, 0.025]} radius={0.012} smoothness={3}>
+              <meshToonMaterial color="#fbf8f2" gradientMap={toonGradient} toneMapped={false} />
+            </RoundedBox>
+            <RoundedBox position={[x, 0.66, -0.325]} args={[0.2, 0.035, 0.022]} radius={0.01} smoothness={3}>
+              <meshBasicMaterial color="#b9c2cb" toneMapped={false} />
+            </RoundedBox>
+          </group>
+        ))}
+        {/* sink at world (−2.42, 2.59) = local (0.24, −0.03) */}
+        <RoundedBox position={[0.24, 0.918, -0.03]} args={[0.6, 0.028, 0.5]} radius={0.014} smoothness={3}>
+          <meshBasicMaterial color="#dde6ea" toneMapped={false} />
+        </RoundedBox>
+        <mesh position={[0.24, 1.0, 0.16]}>
+          <cylinderGeometry args={[0.021, 0.026, 0.2, 12]} />
+          <meshBasicMaterial color="#9fb4c4" toneMapped={false} />
+        </mesh>
+        <mesh position={[0.24, 1.09, 0.08]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.018, 0.018, 0.17, 10]} />
+          <meshBasicMaterial color="#9fb4c4" toneMapped={false} />
+        </mesh>
+        <RoundedBox position={[-0.22, 0.93, -0.04]} args={[0.3, 0.02, 0.2]} radius={0.01} smoothness={3} rotation={[0, 0.2, 0]}>
+          <meshToonMaterial color="#d9b58c" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+      </group>
+
+      {/* REF east of sink, north of 玄關隔間. ~0.70 × 0.75; labeled 65 is N–S depth. */}
+      <group position={[-1.72, 0, 2.57]}>
+        <RoundedBox position={[0, 0.9, 0]} args={[0.7, 1.78, 0.75]} radius={0.12} smoothness={5}>
           <meshToonMaterial color="#f4eee1" gradientMap={toonGradient} toneMapped={false} />
         </RoundedBox>
-        <mesh position={[0.31, 1.26, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <boxGeometry args={[0.014, 0.014, 0.6]} />
+        <mesh position={[0, 1.26, -0.36]} rotation={[0, 0, Math.PI / 2]}>
+          <boxGeometry args={[0.014, 0.014, 0.62]} />
           <meshBasicMaterial color="#e3dccb" toneMapped={false} />
         </mesh>
         {[1.44, 0.98].map((y) => (
           <group key={`fridge-handle-${y}`}>
-            <RoundedBox position={[0.33, y, 0.18]} args={[0.035, 0.2, 0.045]} radius={0.016} smoothness={3}>
+            <RoundedBox position={[0.18, y, -0.38]} args={[0.045, 0.2, 0.035]} radius={0.016} smoothness={3}>
               <meshBasicMaterial color="#c4ccd3" toneMapped={false} />
             </RoundedBox>
           </group>
         ))}
       </group>
-      {/* I1A6-02 167.5 dining built-in: west wall +167.5, 89.4 deep, north of the 120 cook/sink run. Not catalog DME52. */}
-      {floorplanId === "bh7-a6" && (
-        <group position={[0.515, 0, -1.037]}>
-          <RigidBody type="fixed" colliders={false}>
-            <CuboidCollider args={[0.838, 0.38, 0.447]} position={[0, 0.38, 0]} />
-          </RigidBody>
-          <RoundedBox position={[0, 0.37, 0]} args={[1.675, 0.7, 0.894]} radius={0.08} smoothness={4}>
-            <meshToonMaterial color="#f3e6d4" gradientMap={toonGradient} toneMapped={false} />
-          </RoundedBox>
-          <RoundedBox position={[0, 0.735, 0]} args={[1.7, 0.06, 0.92]} radius={0.03} smoothness={4}>
-            <meshToonMaterial color="#e8d4bc" gradientMap={toonGradient} toneMapped={false} />
-          </RoundedBox>
-        </group>
-      )}
+
+      {/* dining-1675 at (−2.43, 0.64) — I1A6-02 north 167.5 bar. Not catalog DME52. */}
+      <group position={[-2.43, 0, 0.64]}>
+        <RoundedBox position={[0, 0.37, 0]} args={[1.675, 0.7, 0.894]} radius={0.08} smoothness={4}>
+          <meshToonMaterial color="#f3e6d4" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+        <RoundedBox position={[0, 0.735, 0]} args={[1.7, 0.06, 0.92]} radius={0.03} smoothness={4}>
+          <meshToonMaterial color="#e8d4bc" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+      </group>
     </group>
   );
 }
