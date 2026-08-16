@@ -3,7 +3,7 @@
 import { Canvas, ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import { RoundedBox, useGLTF, useTexture } from "@react-three/drei";
 import { CuboidCollider, Physics, RigidBody } from "@react-three/rapier";
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, type ComponentProps } from "react";
 import * as THREE from "three";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { OutlinePass } from "three/addons/postprocessing/OutlinePass.js";
@@ -12,7 +12,14 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import type { EditorMode, FurnitureItem, SceneObjectV1 } from "../lib/domain";
 import { getFloorplanRuntime, resolveFloorplanPlacement, type FloorplanOpening, type FloorplanWallSegment } from "../lib/floorplan-runtime";
 import { getScenePresentation, type ScenePresentation, type SceneView } from "../lib/scene-presentation";
-import { homePlayVisual } from "../lib/visual-contract";
+import { defaultLookMode, homePlayVisual, lookFillet, lookModeVisual, type LookMode } from "../lib/visual-contract";
+
+const LookModeContext = createContext<LookMode>(defaultLookMode);
+
+function RoundedBoxLook(props: ComponentProps<typeof RoundedBox>) {
+  const look = useContext(LookModeContext);
+  return <RoundedBox {...props} radius={lookFillet(props.radius ?? 0.05, look)} />;
+}
 
 type Props = {
   floorplanId: string;
@@ -29,6 +36,7 @@ type Props = {
   cameraResetNonce: number;
   auditMode: boolean;
   sceneView: SceneView;
+  lookMode?: LookMode;
 };
 
 const roomPalette: Record<string, { wall: string; floor: string; accent: string; sky: string; sunlight: string }> = {
@@ -39,7 +47,9 @@ const roomPalette: Record<string, { wall: string; floor: string; accent: string;
   empty: { wall: "#faf5ed", floor: "#e7dac9", accent: "#b9c7c3", sky: "#dce6e8", sunlight: "#f5ead1" },
 };
 
-const toonGradient = createToonGradient();
+const cuteToonGradient = createToonGradient("cute");
+const physicalToonGradient = createToonGradient("physical");
+let toonGradient = cuteToonGradient;
 
 const heroAssetPaths: Record<FurnitureItem["shape"], string> = {
   sofa: "/assets/hero-room/sofa-soft.glb",
@@ -55,6 +65,8 @@ const heroAssetPaths: Record<FurnitureItem["shape"], string> = {
 const mascotAssetPath = "/assets/hero-room/mascot-resident.glb?v=lookdev-3";
 
 export function ExperienceCanvas(props: Props) {
+  const lookMode = props.lookMode ?? defaultLookMode;
+  toonGradient = lookMode === "physical" ? physicalToonGradient : cuteToonGradient;
   const palette = roomPalette[props.themeId] ?? roomPalette.sunny;
   const presentation = useMemo(
     () => getScenePresentation(props.floorplanId, props.sceneView, props.auditMode),
@@ -66,6 +78,7 @@ export function ExperienceCanvas(props: Props) {
   }, [props.catalog]);
 
   return (
+    <LookModeContext.Provider value={lookMode}>
     <Canvas
       orthographic
       dpr={[1, 1.75]}
@@ -105,36 +118,39 @@ export function ExperienceCanvas(props: Props) {
       <WatercolorOutlineComposer selectedId={props.selectedId} />
       <CameraControls mode={props.mode} resetNonce={props.cameraResetNonce} presentation={presentation} />
     </Canvas>
+    </LookModeContext.Provider>
   );
 }
 
 function WatercolorOutlineComposer({ selectedId }: { selectedId: string | null }) {
   const { gl, scene, camera, size } = useThree();
+  const look = useContext(LookModeContext);
+  const lookVisual = lookModeVisual[look];
   const pipeline = useMemo(() => {
     const composer = new EffectComposer(gl);
     const renderPass = new RenderPass(scene, camera);
     const roomOutline = new OutlinePass(new THREE.Vector2(1, 1), scene, camera);
     roomOutline.visibleEdgeColor.set(homePlayVisual.scene.outline);
     roomOutline.hiddenEdgeColor.set(homePlayVisual.scene.background);
-    roomOutline.edgeStrength = 0.34;
+    roomOutline.edgeStrength = lookVisual.roomOutlineStrength;
     roomOutline.edgeGlow = 0;
-    roomOutline.edgeThickness = 0.4;
+    roomOutline.edgeThickness = look === "physical" ? 0.22 : 0.4;
     roomOutline.pulsePeriod = 0;
 
     const objectOutline = new OutlinePass(new THREE.Vector2(1, 1), scene, camera);
     objectOutline.visibleEdgeColor.set(homePlayVisual.scene.objectOutline);
     objectOutline.hiddenEdgeColor.set(homePlayVisual.scene.background);
-    objectOutline.edgeStrength = 1.05;
+    objectOutline.edgeStrength = lookVisual.objectOutlineStrength;
     objectOutline.edgeGlow = 0;
-    objectOutline.edgeThickness = 0.78;
+    objectOutline.edgeThickness = lookVisual.objectOutlineThickness;
     objectOutline.pulsePeriod = 0;
 
     const selectedOutline = new OutlinePass(new THREE.Vector2(1, 1), scene, camera);
     selectedOutline.visibleEdgeColor.set(homePlayVisual.color.coral);
     selectedOutline.hiddenEdgeColor.set(homePlayVisual.color.peach);
-    selectedOutline.edgeStrength = 1.65;
+    selectedOutline.edgeStrength = lookVisual.selectedOutlineStrength;
     selectedOutline.edgeGlow = 0;
-    selectedOutline.edgeThickness = 0.95;
+    selectedOutline.edgeThickness = look === "physical" ? 0.5 : 0.95;
     selectedOutline.pulsePeriod = 0;
 
     composer.addPass(renderPass);
@@ -143,7 +159,7 @@ function WatercolorOutlineComposer({ selectedId }: { selectedId: string | null }
     composer.addPass(selectedOutline);
     composer.addPass(new OutputPass());
     return { composer, roomOutline, objectOutline, selectedOutline };
-  }, [camera, gl, scene]);
+  }, [camera, gl, look, lookVisual, scene]);
   const pipelineRef = useRef(pipeline);
 
   useLayoutEffect(() => {
@@ -275,12 +291,12 @@ function WallDecor({ floorplanId, accent }: { floorplanId: "bh7-a6" | "bh7-a11";
     <group>
       {/* 拱形掛畫 */}
       <group position={[wallX, 1.56, -2.15]} rotation={[0, Math.PI / 2, 0]}>
-        <RoundedBox args={[0.52, 0.68, 0.045]} radius={0.02} smoothness={3}>
+        <RoundedBoxLook args={[0.52, 0.68, 0.045]} radius={0.02} smoothness={3}>
           <meshBasicMaterial color="#fffdf8" toneMapped={false} />
-        </RoundedBox>
-        <RoundedBox position={[0, -0.075, 0.006]} args={[0.3, 0.36, 0.045]} radius={0.018} smoothness={3}>
+        </RoundedBoxLook>
+        <RoundedBoxLook position={[0, -0.075, 0.006]} args={[0.3, 0.36, 0.045]} radius={0.018} smoothness={3}>
           <meshBasicMaterial color={accent} toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
         <mesh position={[0, 0.105, 0.006]} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[0.15, 0.15, 0.045, 24, 1, false, 0, Math.PI]} />
           <meshBasicMaterial color={accent} toneMapped={false} />
@@ -288,16 +304,16 @@ function WallDecor({ floorplanId, accent }: { floorplanId: "bh7-a6" | "bh7-a11";
       </group>
       {/* 圓與山丘掛畫 */}
       <group position={[wallX, 1.5, -1.6]} rotation={[0, Math.PI / 2, 0]}>
-        <RoundedBox args={[0.44, 0.56, 0.045]} radius={0.02} smoothness={3}>
+        <RoundedBoxLook args={[0.44, 0.56, 0.045]} radius={0.02} smoothness={3}>
           <meshBasicMaterial color="#fffdf8" toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
         <mesh position={[0, 0.08, 0.026]} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[0.085, 0.085, 0.012, 24]} />
           <meshBasicMaterial color={homePlayVisual.color.peach} toneMapped={false} />
         </mesh>
-        <RoundedBox position={[0, -0.14, 0.026]} args={[0.3, 0.1, 0.012]} radius={0.045} smoothness={3}>
+        <RoundedBoxLook position={[0, -0.14, 0.026]} args={[0.3, 0.1, 0.012]} radius={0.045} smoothness={3}>
           <meshBasicMaterial color="#d9c6a8" toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
       </group>
       {/* 掛鐘（層架上方） */}
       <group position={[wallX, 1.82, -0.45]} rotation={[0, 0, Math.PI / 2]}>
@@ -434,17 +450,17 @@ function ShellWall({ wall, wallColor, mode, auditMode }: { wall: FloorplanWallSe
   const showBaseboard = !auditMode && displayHeight > 0.5;
   return (
     <group position={[wall.center[0], 0, wall.center[1]]} rotation={[0, wall.rotationY ?? 0, 0]}>
-      <RoundedBox position={[0, displayHeight / 2, 0]} args={[wall.size[0], displayHeight, wall.size[1]]} radius={0.045} smoothness={4}>
+      <RoundedBoxLook position={[0, displayHeight / 2, 0]} args={[wall.size[0], displayHeight, wall.size[1]]} radius={0.045} smoothness={4}>
         <meshBasicMaterial color={color} toneMapped={false} />
-      </RoundedBox>
+      </RoundedBoxLook>
       {showBaseboard && (
-        <RoundedBox position={[0, 0.055, 0]} args={[wall.size[0] + 0.018, 0.11, wall.size[1] + 0.03]} radius={0.018} smoothness={3}>
+        <RoundedBoxLook position={[0, 0.055, 0]} args={[wall.size[0] + 0.018, 0.11, wall.size[1] + 0.03]} radius={0.018} smoothness={3}>
           <meshBasicMaterial color="#eee1cd" toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
       )}
-      <RoundedBox position={[0, displayHeight + 0.025, 0]} args={[wall.size[0] + 0.025, 0.05, wall.size[1] + 0.025]} radius={0.024} smoothness={3}>
+      <RoundedBoxLook position={[0, displayHeight + 0.025, 0]} args={[wall.size[0] + 0.025, 0.05, wall.size[1] + 0.025]} radius={0.024} smoothness={3}>
         <meshBasicMaterial color={auditMode ? homePlayVisual.color.blueLine : "#d1ddec"} toneMapped={false} />
-      </RoundedBox>
+      </RoundedBoxLook>
     </group>
   );
 }
@@ -455,14 +471,14 @@ function ShellOpening({ opening, mode, wallColor, skyColor, auditMode }: { openi
     const doorHeight = auditMode ? 0.18 : mode === "decorate" ? 0.7 : 0.68;
     return (
       <group position={[opening.center[0], 0, opening.center[1]]} rotation={[0, opening.rotationY, 0]}>
-        <RoundedBox position={[0, 0.025, 0]} args={[opening.width, 0.05, opening.wallThickness + 0.035]} radius={0.018} smoothness={3}>
+        <RoundedBoxLook position={[0, 0.025, 0]} args={[opening.width, 0.05, opening.wallThickness + 0.035]} radius={0.018} smoothness={3}>
           <meshBasicMaterial color="#f5c7ab" toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
         {!auditMode && (
           <group position={[-opening.width / 2, 0, 0]} rotation={[0, -0.52, 0]}>
-            <RoundedBox position={[opening.width / 2, doorHeight / 2, 0]} args={[opening.width, doorHeight, 0.055]} radius={0.035} smoothness={4}>
+            <RoundedBoxLook position={[opening.width / 2, doorHeight / 2, 0]} args={[opening.width, doorHeight, 0.055]} radius={0.035} smoothness={4}>
               <meshToonMaterial color="#f5cfaa" gradientMap={toonGradient} toneMapped={false} />
-            </RoundedBox>
+            </RoundedBoxLook>
             <mesh position={[opening.width * 0.83, doorHeight * 0.74, 0.045]}>
               <sphereGeometry args={[0.035, 12, 8]} />
               <meshBasicMaterial color="#b78768" />
@@ -481,24 +497,24 @@ function ShellOpening({ opening, mode, wallColor, skyColor, auditMode }: { openi
   const isWideGlass = !auditMode && opening.type === "sliding-door" && opening.width > 1.4;
   return (
     <group position={[opening.center[0], 0, opening.center[1]]} rotation={[0, opening.rotationY, 0]}>
-      {sill > 0.06 && <RoundedBox position={[0, sill / 2, 0]} args={[opening.width, sill, opening.wallThickness]} radius={0.035} smoothness={4}>
+      {sill > 0.06 && <RoundedBoxLook position={[0, sill / 2, 0]} args={[opening.width, sill, opening.wallThickness]} radius={0.035} smoothness={4}>
         <meshBasicMaterial color={wallColor} toneMapped={false} />
-      </RoundedBox>}
+      </RoundedBoxLook>}
       {/* 白色外框 */}
       {!auditMode && (
-        <RoundedBox position={[0, sill + visibleHeight / 2, -0.006]} args={[opening.width + 0.06, visibleHeight + 0.05, 0.028]} radius={0.02} smoothness={3}>
+        <RoundedBoxLook position={[0, sill + visibleHeight / 2, -0.006]} args={[opening.width + 0.06, visibleHeight + 0.05, 0.028]} radius={0.02} smoothness={3}>
           <meshBasicMaterial color="#fffdf8" toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
       )}
       {/* 玻璃（天空） */}
-      <RoundedBox position={[0, sill + visibleHeight / 2, 0]} args={[glassWidth, glassHeight, 0.035]} radius={0.03} smoothness={3}>
+      <RoundedBoxLook position={[0, sill + visibleHeight / 2, 0]} args={[glassWidth, glassHeight, 0.035]} radius={0.03} smoothness={3}>
         <meshBasicMaterial color={skyColor} transparent opacity={0.6} />
-      </RoundedBox>
+      </RoundedBoxLook>
       {/* 窗外遠景綠意（置於玻璃後方，避免共面閃爍） */}
       {!auditMode && (
-        <RoundedBox position={[0, sill + glassHeight * 0.2, -0.012]} args={[glassWidth - 0.05, Math.max(0.1, glassHeight * 0.32), 0.026]} radius={0.024} smoothness={3}>
+        <RoundedBoxLook position={[0, sill + glassHeight * 0.2, -0.012]} args={[glassWidth - 0.05, Math.max(0.1, glassHeight * 0.32), 0.026]} radius={0.024} smoothness={3}>
           <meshBasicMaterial color="#cddec7" transparent opacity={0.75} />
-        </RoundedBox>
+        </RoundedBoxLook>
       )}
       {/* 窗櫺 */}
       {Array.from({ length: panelCount - 1 }, (_, index) => {
@@ -525,19 +541,19 @@ function ShellOpening({ opening, mode, wallColor, skyColor, auditMode }: { openi
           </mesh>
           {[-1, 1].map((side) => (
             <group key={`curtain-${side}`} position={[side * (opening.width / 2 - 0.17), 0, 0]}>
-              <RoundedBox position={[0, sill + visibleHeight / 2 + 0.02, 0]} args={[0.4, visibleHeight + 0.02, 0.13]} radius={0.055} smoothness={4}>
+              <RoundedBoxLook position={[0, sill + visibleHeight / 2 + 0.02, 0]} args={[0.4, visibleHeight + 0.02, 0.13]} radius={0.055} smoothness={4}>
                 <meshToonMaterial color="#fbf8f1" gradientMap={toonGradient} toneMapped={false} />
-              </RoundedBox>
-              <RoundedBox position={[side * 0.08, sill + visibleHeight * 0.52, 0.015]} args={[0.22, visibleHeight * 0.86, 0.125]} radius={0.05} smoothness={4}>
+              </RoundedBoxLook>
+              <RoundedBoxLook position={[side * 0.08, sill + visibleHeight * 0.52, 0.015]} args={[0.22, visibleHeight * 0.86, 0.125]} radius={0.05} smoothness={4}>
                 <meshToonMaterial color="#f1ece1" gradientMap={toonGradient} toneMapped={false} />
-              </RoundedBox>
+              </RoundedBoxLook>
             </group>
           ))}
         </group>
       )}
-      <RoundedBox position={[0, sill + visibleHeight + 0.02, 0]} args={[opening.width + 0.02, 0.065, opening.wallThickness + 0.02]} radius={0.025} smoothness={3}>
+      <RoundedBoxLook position={[0, sill + visibleHeight + 0.02, 0]} args={[opening.width + 0.02, 0.065, opening.wallThickness + 0.02]} radius={0.025} smoothness={3}>
         <meshBasicMaterial color={homePlayVisual.color.blueLine} />
-      </RoundedBox>
+      </RoundedBoxLook>
     </group>
   );
 }
@@ -550,28 +566,28 @@ function FixedKitchen({ floorplanId }: { floorplanId: "bh7-a6" | "bh7-a11" }) {
           <CuboidCollider args={[0.34, 0.5, 1.2]} position={[0.02, 0.5, 0]} />
           <CuboidCollider args={[0.33, 0.9, 0.34]} position={[0, 0.9, -1.52]} />
         </RigidBody>
-        <RoundedBox position={[0, 0.46, 0]} args={[0.58, 0.78, 2.3]} radius={0.05} smoothness={4}>
+        <RoundedBoxLook position={[0, 0.46, 0]} args={[0.58, 0.78, 2.3]} radius={0.05} smoothness={4}>
           <meshToonMaterial color="#f6f2ea" gradientMap={toonGradient} toneMapped={false} />
-        </RoundedBox>
-        <RoundedBox position={[0.01, 0.06, 0]} args={[0.54, 0.12, 2.24]} radius={0.03} smoothness={3}>
+        </RoundedBoxLook>
+        <RoundedBoxLook position={[0.01, 0.06, 0]} args={[0.54, 0.12, 2.24]} radius={0.03} smoothness={3}>
           <meshBasicMaterial color="#ddd6ca" toneMapped={false} />
-        </RoundedBox>
-        <RoundedBox position={[0.03, 0.88, 0]} args={[0.66, 0.07, 2.4]} radius={0.032} smoothness={4}>
+        </RoundedBoxLook>
+        <RoundedBoxLook position={[0.03, 0.88, 0]} args={[0.66, 0.07, 2.4]} radius={0.032} smoothness={4}>
           <meshToonMaterial color="#b6b1a8" gradientMap={toonGradient} toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
         {[-0.76, 0, 0.76].map((z) => (
           <group key={`door-${z}`}>
-            <RoundedBox position={[0.3, 0.45, z]} args={[0.025, 0.6, 0.62]} radius={0.012} smoothness={3}>
+            <RoundedBoxLook position={[0.3, 0.45, z]} args={[0.025, 0.6, 0.62]} radius={0.012} smoothness={3}>
               <meshToonMaterial color="#fbf8f2" gradientMap={toonGradient} toneMapped={false} />
-            </RoundedBox>
-            <RoundedBox position={[0.325, 0.66, z]} args={[0.022, 0.035, 0.24]} radius={0.01} smoothness={3}>
+            </RoundedBoxLook>
+            <RoundedBoxLook position={[0.325, 0.66, z]} args={[0.022, 0.035, 0.24]} radius={0.01} smoothness={3}>
               <meshBasicMaterial color="#b9c2cb" toneMapped={false} />
-            </RoundedBox>
+            </RoundedBoxLook>
           </group>
         ))}
-        <RoundedBox position={[0.05, 0.918, -0.62]} args={[0.42, 0.028, 0.52]} radius={0.014} smoothness={3}>
+        <RoundedBoxLook position={[0.05, 0.918, -0.62]} args={[0.42, 0.028, 0.52]} radius={0.014} smoothness={3}>
           <meshBasicMaterial color="#dde6ea" toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
         <mesh position={[-0.17, 1.0, -0.62]}>
           <cylinderGeometry args={[0.021, 0.026, 0.2, 12]} />
           <meshBasicMaterial color="#9fb4c4" toneMapped={false} />
@@ -580,21 +596,21 @@ function FixedKitchen({ floorplanId }: { floorplanId: "bh7-a6" | "bh7-a11" }) {
           <cylinderGeometry args={[0.018, 0.018, 0.17, 10]} />
           <meshBasicMaterial color="#9fb4c4" toneMapped={false} />
         </mesh>
-        <RoundedBox position={[0.05, 0.918, 0.62]} args={[0.44, 0.024, 0.56]} radius={0.014} smoothness={3}>
+        <RoundedBoxLook position={[0.05, 0.918, 0.62]} args={[0.44, 0.024, 0.56]} radius={0.014} smoothness={3}>
           <meshBasicMaterial color="#7c766f" toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
         {[0.44, 0.8].map((z) => (
           <mesh key={`burner-${z}`} position={[0.05, 0.936, z]}>
             <cylinderGeometry args={[0.085, 0.085, 0.014, 24]} />
             <meshBasicMaterial color="#655854" toneMapped={false} />
           </mesh>
         ))}
-        <RoundedBox position={[-0.02, 1.62, 0.62]} args={[0.5, 0.09, 0.6]} radius={0.02} smoothness={3}>
+        <RoundedBoxLook position={[-0.02, 1.62, 0.62]} args={[0.5, 0.09, 0.6]} radius={0.02} smoothness={3}>
           <meshToonMaterial color="#ccd3d9" gradientMap={toonGradient} toneMapped={false} />
-        </RoundedBox>
-        <RoundedBox position={[-0.1, 1.95, 0.62]} args={[0.26, 0.58, 0.3]} radius={0.02} smoothness={3}>
+        </RoundedBoxLook>
+        <RoundedBoxLook position={[-0.1, 1.95, 0.62]} args={[0.26, 0.58, 0.3]} radius={0.02} smoothness={3}>
           <meshToonMaterial color="#d6dce1" gradientMap={toonGradient} toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
         <mesh position={[0.05, 0.95, 0.08]}>
           <cylinderGeometry args={[0.085, 0.095, 0.09, 20]} />
           <meshToonMaterial color="#df8f78" gradientMap={toonGradient} toneMapped={false} />
@@ -603,36 +619,36 @@ function FixedKitchen({ floorplanId }: { floorplanId: "bh7-a6" | "bh7-a11" }) {
           <sphereGeometry args={[0.088, 20, 12]} />
           <meshToonMaterial color="#e8a58d" gradientMap={toonGradient} toneMapped={false} />
         </mesh>
-        <RoundedBox position={[0.04, 0.93, -0.24]} args={[0.3, 0.02, 0.2]} radius={0.01} smoothness={3} rotation={[0, 0.2, 0]}>
+        <RoundedBoxLook position={[0.04, 0.93, -0.24]} args={[0.3, 0.02, 0.2]} radius={0.01} smoothness={3} rotation={[0, 0.2, 0]}>
           <meshToonMaterial color="#d9b58c" gradientMap={toonGradient} toneMapped={false} />
-        </RoundedBox>
-        <RoundedBox position={[-0.275, 1.2, 0]} args={[0.03, 0.58, 2.3]} radius={0.014} smoothness={3}>
+        </RoundedBoxLook>
+        <RoundedBoxLook position={[-0.275, 1.2, 0]} args={[0.03, 0.58, 2.3]} radius={0.014} smoothness={3}>
           <meshBasicMaterial color="#eceeed" toneMapped={false} />
-        </RoundedBox>
-        <RoundedBox position={[-0.13, 1.76, -0.35]} args={[0.34, 0.56, 1.35]} radius={0.04} smoothness={4}>
+        </RoundedBoxLook>
+        <RoundedBoxLook position={[-0.13, 1.76, -0.35]} args={[0.34, 0.56, 1.35]} radius={0.04} smoothness={4}>
           <meshToonMaterial color="#f6f2ea" gradientMap={toonGradient} toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
         {[-0.86, -0.42, 0.02].map((z) => (
-          <RoundedBox key={`upper-door-${z}`} position={[0.045, 1.76, z + 0.28]} args={[0.02, 0.5, 0.42]} radius={0.01} smoothness={3}>
+          <RoundedBoxLook key={`upper-door-${z}`} position={[0.045, 1.76, z + 0.28]} args={[0.02, 0.5, 0.42]} radius={0.01} smoothness={3}>
             <meshToonMaterial color="#fbf8f2" gradientMap={toonGradient} toneMapped={false} />
-          </RoundedBox>
+          </RoundedBoxLook>
         ))}
-        <RoundedBox position={[-0.1, 2.12, -0.35]} args={[0.42, 0.16, 1.44]} radius={0.03} smoothness={3}>
+        <RoundedBoxLook position={[-0.1, 2.12, -0.35]} args={[0.42, 0.16, 1.44]} radius={0.03} smoothness={3}>
           <meshToonMaterial color="#dcb98e" gradientMap={toonGradient} toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
         <group position={[0, 0, -1.52]}>
-          <RoundedBox position={[0, 0.9, 0]} args={[0.64, 1.78, 0.66]} radius={0.12} smoothness={5}>
+          <RoundedBoxLook position={[0, 0.9, 0]} args={[0.64, 1.78, 0.66]} radius={0.12} smoothness={5}>
             <meshToonMaterial color="#f4eee1" gradientMap={toonGradient} toneMapped={false} />
-          </RoundedBox>
+          </RoundedBoxLook>
           <mesh position={[0.31, 1.26, 0]} rotation={[Math.PI / 2, 0, 0]}>
             <boxGeometry args={[0.014, 0.014, 0.6]} />
             <meshBasicMaterial color="#e3dccb" toneMapped={false} />
           </mesh>
           {[1.44, 0.98].map((y) => (
             <group key={`fridge-handle-${y}`}>
-              <RoundedBox position={[0.33, y, 0.18]} args={[0.035, 0.2, 0.045]} radius={0.016} smoothness={3}>
+              <RoundedBoxLook position={[0.33, y, 0.18]} args={[0.035, 0.2, 0.045]} radius={0.016} smoothness={3}>
                 <meshBasicMaterial color="#c4ccd3" toneMapped={false} />
-              </RoundedBox>
+              </RoundedBoxLook>
             </group>
           ))}
         </group>
@@ -658,41 +674,41 @@ function FixedKitchen({ floorplanId }: { floorplanId: "bh7-a6" | "bh7-a11" }) {
 
       {/* West stove run: 0.65 × 1.21 along west wall */}
       <group position={[-2.94, 0, 1.69]}>
-        <RoundedBox position={[0, 0.46, 0]} args={[0.58, 0.78, 1.15]} radius={0.05} smoothness={4}>
+        <RoundedBoxLook position={[0, 0.46, 0]} args={[0.58, 0.78, 1.15]} radius={0.05} smoothness={4}>
           <meshToonMaterial color="#f6f2ea" gradientMap={toonGradient} toneMapped={false} />
-        </RoundedBox>
-        <RoundedBox position={[0.01, 0.06, 0]} args={[0.54, 0.12, 1.1]} radius={0.03} smoothness={3}>
+        </RoundedBoxLook>
+        <RoundedBoxLook position={[0.01, 0.06, 0]} args={[0.54, 0.12, 1.1]} radius={0.03} smoothness={3}>
           <meshBasicMaterial color="#ddd6ca" toneMapped={false} />
-        </RoundedBox>
-        <RoundedBox position={[0.03, 0.88, 0]} args={[0.65, 0.07, 1.21]} radius={0.032} smoothness={4}>
+        </RoundedBoxLook>
+        <RoundedBoxLook position={[0.03, 0.88, 0]} args={[0.65, 0.07, 1.21]} radius={0.032} smoothness={4}>
           <meshToonMaterial color="#b6b1a8" gradientMap={toonGradient} toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
         {[-0.28, 0.28].map((z) => (
           <group key={`west-door-${z}`}>
-            <RoundedBox position={[0.3, 0.45, z]} args={[0.025, 0.6, 0.5]} radius={0.012} smoothness={3}>
+            <RoundedBoxLook position={[0.3, 0.45, z]} args={[0.025, 0.6, 0.5]} radius={0.012} smoothness={3}>
               <meshToonMaterial color="#fbf8f2" gradientMap={toonGradient} toneMapped={false} />
-            </RoundedBox>
-            <RoundedBox position={[0.325, 0.66, z]} args={[0.022, 0.035, 0.2]} radius={0.01} smoothness={3}>
+            </RoundedBoxLook>
+            <RoundedBoxLook position={[0.325, 0.66, z]} args={[0.022, 0.035, 0.2]} radius={0.01} smoothness={3}>
               <meshBasicMaterial color="#b9c2cb" toneMapped={false} />
-            </RoundedBox>
+            </RoundedBoxLook>
           </group>
         ))}
         {/* cooktop on NORTH half (local z −0.15 → world z 1.54) */}
-        <RoundedBox position={[0.03, 0.918, -0.15]} args={[0.52, 0.024, 0.34]} radius={0.014} smoothness={3}>
+        <RoundedBoxLook position={[0.03, 0.918, -0.15]} args={[0.52, 0.024, 0.34]} radius={0.014} smoothness={3}>
           <meshBasicMaterial color="#7c766f" toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
         {[-0.1, 0.1].map((x) => (
           <mesh key={`burner-${x}`} position={[x, 0.936, -0.15]}>
             <cylinderGeometry args={[0.07, 0.07, 0.014, 24]} />
             <meshBasicMaterial color="#655854" toneMapped={false} />
           </mesh>
         ))}
-        <RoundedBox position={[-0.02, 1.62, -0.15]} args={[0.5, 0.09, 0.42]} radius={0.02} smoothness={3}>
+        <RoundedBoxLook position={[-0.02, 1.62, -0.15]} args={[0.5, 0.09, 0.42]} radius={0.02} smoothness={3}>
           <meshToonMaterial color="#ccd3d9" gradientMap={toonGradient} toneMapped={false} />
-        </RoundedBox>
-        <RoundedBox position={[-0.1, 1.95, -0.15]} args={[0.26, 0.58, 0.28]} radius={0.02} smoothness={3}>
+        </RoundedBoxLook>
+        <RoundedBoxLook position={[-0.1, 1.95, -0.15]} args={[0.26, 0.58, 0.28]} radius={0.02} smoothness={3}>
           <meshToonMaterial color="#d6dce1" gradientMap={toonGradient} toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
         <mesh position={[0.04, 0.95, 0.28]}>
           <cylinderGeometry args={[0.085, 0.095, 0.09, 20]} />
           <meshToonMaterial color="#df8f78" gradientMap={toonGradient} toneMapped={false} />
@@ -701,47 +717,47 @@ function FixedKitchen({ floorplanId }: { floorplanId: "bh7-a6" | "bh7-a11" }) {
           <sphereGeometry args={[0.088, 20, 12]} />
           <meshToonMaterial color="#e8a58d" gradientMap={toonGradient} toneMapped={false} />
         </mesh>
-        <RoundedBox position={[-0.275, 1.2, 0]} args={[0.03, 0.58, 1.15]} radius={0.014} smoothness={3}>
+        <RoundedBoxLook position={[-0.275, 1.2, 0]} args={[0.03, 0.58, 1.15]} radius={0.014} smoothness={3}>
           <meshBasicMaterial color="#eceeed" toneMapped={false} />
-        </RoundedBox>
-        <RoundedBox position={[-0.13, 1.76, 0]} args={[0.34, 0.56, 1.05]} radius={0.04} smoothness={4}>
+        </RoundedBoxLook>
+        <RoundedBoxLook position={[-0.13, 1.76, 0]} args={[0.34, 0.56, 1.05]} radius={0.04} smoothness={4}>
           <meshToonMaterial color="#f6f2ea" gradientMap={toonGradient} toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
         {[-0.28, 0.28].map((z) => (
-          <RoundedBox key={`west-upper-${z}`} position={[0.045, 1.76, z]} args={[0.02, 0.5, 0.42]} radius={0.01} smoothness={3}>
+          <RoundedBoxLook key={`west-upper-${z}`} position={[0.045, 1.76, z]} args={[0.02, 0.5, 0.42]} radius={0.01} smoothness={3}>
             <meshToonMaterial color="#fbf8f2" gradientMap={toonGradient} toneMapped={false} />
-          </RoundedBox>
+          </RoundedBoxLook>
         ))}
-        <RoundedBox position={[-0.1, 2.12, 0]} args={[0.42, 0.16, 1.12]} radius={0.03} smoothness={3}>
+        <RoundedBoxLook position={[-0.1, 2.12, 0]} args={[0.42, 0.16, 1.12]} radius={0.03} smoothness={3}>
           <meshToonMaterial color="#dcb98e" gradientMap={toonGradient} toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
       </group>
 
       {/* South return: 1.19 × 0.65 along 玄關隔間, sink on it */}
       <group position={[-2.66, 0, 2.62]}>
-        <RoundedBox position={[0, 0.46, 0]} args={[1.13, 0.78, 0.58]} radius={0.05} smoothness={4}>
+        <RoundedBoxLook position={[0, 0.46, 0]} args={[1.13, 0.78, 0.58]} radius={0.05} smoothness={4}>
           <meshToonMaterial color="#f6f2ea" gradientMap={toonGradient} toneMapped={false} />
-        </RoundedBox>
-        <RoundedBox position={[0, 0.06, 0.01]} args={[1.08, 0.12, 0.54]} radius={0.03} smoothness={3}>
+        </RoundedBoxLook>
+        <RoundedBoxLook position={[0, 0.06, 0.01]} args={[1.08, 0.12, 0.54]} radius={0.03} smoothness={3}>
           <meshBasicMaterial color="#ddd6ca" toneMapped={false} />
-        </RoundedBox>
-        <RoundedBox position={[0, 0.88, 0.03]} args={[1.19, 0.07, 0.65]} radius={0.032} smoothness={4}>
+        </RoundedBoxLook>
+        <RoundedBoxLook position={[0, 0.88, 0.03]} args={[1.19, 0.07, 0.65]} radius={0.032} smoothness={4}>
           <meshToonMaterial color="#b6b1a8" gradientMap={toonGradient} toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
         {[-0.28, 0.28].map((x) => (
           <group key={`south-door-${x}`}>
-            <RoundedBox position={[x, 0.45, -0.3]} args={[0.5, 0.6, 0.025]} radius={0.012} smoothness={3}>
+            <RoundedBoxLook position={[x, 0.45, -0.3]} args={[0.5, 0.6, 0.025]} radius={0.012} smoothness={3}>
               <meshToonMaterial color="#fbf8f2" gradientMap={toonGradient} toneMapped={false} />
-            </RoundedBox>
-            <RoundedBox position={[x, 0.66, -0.325]} args={[0.2, 0.035, 0.022]} radius={0.01} smoothness={3}>
+            </RoundedBoxLook>
+            <RoundedBoxLook position={[x, 0.66, -0.325]} args={[0.2, 0.035, 0.022]} radius={0.01} smoothness={3}>
               <meshBasicMaterial color="#b9c2cb" toneMapped={false} />
-            </RoundedBox>
+            </RoundedBoxLook>
           </group>
         ))}
         {/* sink at world (−2.42, 2.59) = local (0.24, −0.03) */}
-        <RoundedBox position={[0.24, 0.918, -0.03]} args={[0.6, 0.028, 0.5]} radius={0.014} smoothness={3}>
+        <RoundedBoxLook position={[0.24, 0.918, -0.03]} args={[0.6, 0.028, 0.5]} radius={0.014} smoothness={3}>
           <meshBasicMaterial color="#dde6ea" toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
         <mesh position={[0.24, 1.0, 0.16]}>
           <cylinderGeometry args={[0.021, 0.026, 0.2, 12]} />
           <meshBasicMaterial color="#9fb4c4" toneMapped={false} />
@@ -750,37 +766,37 @@ function FixedKitchen({ floorplanId }: { floorplanId: "bh7-a6" | "bh7-a11" }) {
           <cylinderGeometry args={[0.018, 0.018, 0.17, 10]} />
           <meshBasicMaterial color="#9fb4c4" toneMapped={false} />
         </mesh>
-        <RoundedBox position={[-0.22, 0.93, -0.04]} args={[0.3, 0.02, 0.2]} radius={0.01} smoothness={3} rotation={[0, 0.2, 0]}>
+        <RoundedBoxLook position={[-0.22, 0.93, -0.04]} args={[0.3, 0.02, 0.2]} radius={0.01} smoothness={3} rotation={[0, 0.2, 0]}>
           <meshToonMaterial color="#d9b58c" gradientMap={toonGradient} toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
       </group>
 
       {/* REF east of sink, north of 玄關隔間. ~0.70 × 0.75; labeled 65 is N–S depth. */}
       <group position={[-1.72, 0, 2.57]}>
-        <RoundedBox position={[0, 0.9, 0]} args={[0.7, 1.78, 0.75]} radius={0.12} smoothness={5}>
+        <RoundedBoxLook position={[0, 0.9, 0]} args={[0.7, 1.78, 0.75]} radius={0.12} smoothness={5}>
           <meshToonMaterial color="#f4eee1" gradientMap={toonGradient} toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
         <mesh position={[0, 1.26, -0.36]} rotation={[0, 0, Math.PI / 2]}>
           <boxGeometry args={[0.014, 0.014, 0.62]} />
           <meshBasicMaterial color="#e3dccb" toneMapped={false} />
         </mesh>
         {[1.44, 0.98].map((y) => (
           <group key={`fridge-handle-${y}`}>
-            <RoundedBox position={[0.18, y, -0.38]} args={[0.045, 0.2, 0.035]} radius={0.016} smoothness={3}>
+            <RoundedBoxLook position={[0.18, y, -0.38]} args={[0.045, 0.2, 0.035]} radius={0.016} smoothness={3}>
               <meshBasicMaterial color="#c4ccd3" toneMapped={false} />
-            </RoundedBox>
+            </RoundedBoxLook>
           </group>
         ))}
       </group>
 
       {/* dining-1675 at (−2.43, 0.64) — I1A6-02 north 167.5 bar. Not catalog DME52. */}
       <group position={[-2.43, 0, 0.64]}>
-        <RoundedBox position={[0, 0.37, 0]} args={[1.675, 0.7, 0.894]} radius={0.08} smoothness={4}>
+        <RoundedBoxLook position={[0, 0.37, 0]} args={[1.675, 0.7, 0.894]} radius={0.08} smoothness={4}>
           <meshToonMaterial color="#f3e6d4" gradientMap={toonGradient} toneMapped={false} />
-        </RoundedBox>
-        <RoundedBox position={[0, 0.735, 0]} args={[1.7, 0.06, 0.92]} radius={0.03} smoothness={4}>
+        </RoundedBoxLook>
+        <RoundedBoxLook position={[0, 0.735, 0]} args={[1.7, 0.06, 0.92]} radius={0.03} smoothness={4}>
           <meshToonMaterial color="#e8d4bc" gradientMap={toonGradient} toneMapped={false} />
-        </RoundedBox>
+        </RoundedBoxLook>
       </group>
     </group>
   );
@@ -789,16 +805,16 @@ function FixedKitchen({ floorplanId }: { floorplanId: "bh7-a6" | "bh7-a11" }) {
 function PorcelainToilet({ rotationY = 0 }: { rotationY?: number }) {
   return (
     <group rotation={[0, rotationY, 0]}>
-      <RoundedBox position={[0, 0.2, 0.02]} args={[0.38, 0.4, 0.52]} radius={0.12} smoothness={5}>
+      <RoundedBoxLook position={[0, 0.2, 0.02]} args={[0.38, 0.4, 0.52]} radius={0.12} smoothness={5}>
         <meshToonMaterial color="#f7f3ec" gradientMap={toonGradient} toneMapped={false} />
-      </RoundedBox>
+      </RoundedBoxLook>
       <mesh position={[0, 0.42, -0.02]} rotation={[-Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.16, 0.18, 0.08, 20]} />
         <meshToonMaterial color="#fffdf8" gradientMap={toonGradient} toneMapped={false} />
       </mesh>
-      <RoundedBox position={[0, 0.58, 0.16]} args={[0.36, 0.36, 0.14]} radius={0.08} smoothness={4}>
+      <RoundedBoxLook position={[0, 0.58, 0.16]} args={[0.36, 0.36, 0.14]} radius={0.08} smoothness={4}>
         <meshToonMaterial color="#f4efe6" gradientMap={toonGradient} toneMapped={false} />
-      </RoundedBox>
+      </RoundedBoxLook>
     </group>
   );
 }
@@ -806,12 +822,12 @@ function PorcelainToilet({ rotationY = 0 }: { rotationY?: number }) {
 function PorcelainBasin() {
   return (
     <group>
-      <RoundedBox position={[0, 0.42, 0]} args={[1.075, 0.78, 0.6]} radius={0.08} smoothness={4}>
+      <RoundedBoxLook position={[0, 0.42, 0]} args={[1.075, 0.78, 0.6]} radius={0.08} smoothness={4}>
         <meshToonMaterial color="#f6f2ea" gradientMap={toonGradient} toneMapped={false} />
-      </RoundedBox>
-      <RoundedBox position={[0, 0.82, 0.02]} args={[0.42, 0.06, 0.36]} radius={0.03} smoothness={3}>
+      </RoundedBoxLook>
+      <RoundedBoxLook position={[0, 0.82, 0.02]} args={[0.42, 0.06, 0.36]} radius={0.03} smoothness={3}>
         <meshBasicMaterial color="#e7eef1" toneMapped={false} />
-      </RoundedBox>
+      </RoundedBoxLook>
       <mesh position={[0, 0.96, -0.16]}>
         <cylinderGeometry args={[0.018, 0.022, 0.16, 10]} />
         <meshBasicMaterial color="#c4b6a6" toneMapped={false} />
@@ -829,19 +845,19 @@ function CuteShowerStall({ position, size }: { position: readonly [number, numbe
       <RigidBody type="fixed" colliders={false}>
         <CuboidCollider args={[width / 2, 0.9, depth / 2]} position={[0, 0.9, 0]} />
       </RigidBody>
-      <RoundedBox position={[0, 0.03, 0]} args={[width, 0.06, depth]} radius={0.05} smoothness={4}>
+      <RoundedBoxLook position={[0, 0.03, 0]} args={[width, 0.06, depth]} radius={0.05} smoothness={4}>
         <meshToonMaterial color="#e8eef2" gradientMap={toonGradient} toneMapped={false} />
-      </RoundedBox>
-      <RoundedBox position={[0, 0.048, 0]} args={[Math.max(0.2, width - 0.1), 0.02, Math.max(0.2, depth - 0.1)]} radius={0.04} smoothness={3}>
+      </RoundedBoxLook>
+      <RoundedBoxLook position={[0, 0.048, 0]} args={[Math.max(0.2, width - 0.1), 0.02, Math.max(0.2, depth - 0.1)]} radius={0.04} smoothness={3}>
         <meshBasicMaterial color="#d4e3e8" toneMapped={false} />
-      </RoundedBox>
+      </RoundedBoxLook>
       {/* low cute glass on the west stall opening — matte pastel, no chrome */}
-      <RoundedBox position={[-(width / 2) + 0.018, glassH / 2, 0]} args={[0.032, glassH, Math.max(0.2, depth - 0.08)]} radius={0.03} smoothness={4}>
+      <RoundedBoxLook position={[-(width / 2) + 0.018, glassH / 2, 0]} args={[0.032, glassH, Math.max(0.2, depth - 0.08)]} radius={0.03} smoothness={4}>
         <meshBasicMaterial color="#c8dde4" transparent opacity={0.3} toneMapped={false} />
-      </RoundedBox>
-      <RoundedBox position={[-(width / 2) + 0.018, glassH + 0.018, 0]} args={[0.048, 0.036, Math.max(0.2, depth - 0.04)]} radius={0.016} smoothness={3}>
+      </RoundedBoxLook>
+      <RoundedBoxLook position={[-(width / 2) + 0.018, glassH + 0.018, 0]} args={[0.048, 0.036, Math.max(0.2, depth - 0.04)]} radius={0.016} smoothness={3}>
         <meshBasicMaterial color="#d7e4ea" toneMapped={false} />
-      </RoundedBox>
+      </RoundedBoxLook>
     </group>
   );
 }
@@ -987,8 +1003,10 @@ function Furniture({
 }
 
 function FurnitureModel({ product, variant, selected }: { product: FurnitureItem; variant: number; selected: boolean }) {
+  const look = useContext(LookModeContext);
+  const lookVisual = lookModeVisual[look];
   const themeTints = ["#fff7e9", "#78828b", "#f2c995", "#9fbaa0"];
-  const tintAmount = [0.24, 0.15, 0.2, 0.2][variant] ?? 0.24;
+  const tintAmount = ([0.24, 0.15, 0.2, 0.2][variant] ?? 0.24) * lookVisual.themeLerpScale;
   const baseSource = variant === 1 ? product.accent : product.color;
   const accentSource = variant === 1 ? product.color : product.accent;
   const base = `#${new THREE.Color(baseSource).lerp(new THREE.Color(themeTints[variant] ?? themeTints[0]), tintAmount).getHexString()}`;
@@ -996,13 +1014,17 @@ function FurnitureModel({ product, variant, selected }: { product: FurnitureItem
   const assetPath = resolveProductAssetPath(product);
   const { scene } = useGLTF(assetPath);
   const asset = useMemo(() => cloneAsToon(scene, (role, source) => {
+    if (look === "physical") {
+      if (role === "leafLight") return source;
+      return source;
+    }
     if (role === "leafLight") return `#${new THREE.Color(base).lerp(new THREE.Color("#f4edcf"), 0.28).getHexString()}`;
     if (role === "legs") return source;
     if (role === "wood" && ["sofa", "chair"].includes(product.shape)) return source;
     if (["primary", "wood", "frame", "shade", "leaf"].includes(role)) return base;
     if (["cream", "accent", "edge", "pot", "metal", "mattress", "blanket"].includes(role)) return accent;
     return source;
-  }, selected), [accent, base, product.shape, scene, selected]);
+  }, selected, lookVisual.toonFlat), [accent, base, look, lookVisual.toonFlat, product.shape, scene, selected]);
 
   return <primitive object={asset} />;
 }
@@ -1038,9 +1060,9 @@ function SelectionFootprint({ width, depth }: { width: number; depth: number }) 
   const d = depth + 0.24;
   return (
     <group position={[0, 0.028, 0]}>
-      <RoundedBox args={[w, 0.024, d]} radius={0.01} smoothness={4}>
+      <RoundedBoxLook args={[w, 0.024, d]} radius={0.01} smoothness={4}>
         <meshBasicMaterial color="#85c99a" transparent opacity={0.2} depthWrite={false} />
-      </RoundedBox>
+      </RoundedBoxLook>
       {[
         [-w / 2, -d / 2], [w / 2, -d / 2], [-w / 2, d / 2], [w / 2, d / 2],
       ].map(([x, z], index) => (
@@ -1129,15 +1151,21 @@ function quaternionToY(q: { x: number; y: number; z: number; w: number }) {
   return Math.atan2(2 * (q.w * q.y + q.x * q.z), 1 - 2 * (q.y * q.y + q.z * q.z));
 }
 
-function createToonGradient() {
+function createToonGradient(kind: LookMode = "cute") {
+  const bytes = kind === "physical"
+    ? Uint8Array.from([
+        208, 202, 194, 255,
+        246, 240, 232, 255,
+      ])
+    : Uint8Array.from([
+        176, 168, 180, 255,
+        214, 198, 188, 255,
+        242, 228, 212, 255,
+        255, 250, 244, 255,
+      ]);
   const gradient = new THREE.DataTexture(
-    Uint8Array.from([
-      176, 168, 180, 255,
-      214, 198, 188, 255,
-      242, 228, 212, 255,
-      255, 250, 244, 255,
-    ]),
-    4,
+    bytes,
+    kind === "physical" ? 2 : 4,
     1,
     THREE.RGBAFormat,
   );

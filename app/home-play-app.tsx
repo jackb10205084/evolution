@@ -74,7 +74,7 @@ import { createEditorEngine, quaternionFromY, type EditorCommand, type EditorFlo
 import { proposalProject } from "./lib/project";
 import { getFloorplanRuntime } from "./lib/floorplan-runtime";
 import type { SceneView } from "./lib/scene-presentation";
-import { HOMEPLAY_VISUAL_VERSION, homePlayVisual } from "./lib/visual-contract";
+import { HOMEPLAY_VISUAL_VERSION, defaultLookMode, homePlayVisual, type LookMode } from "./lib/visual-contract";
 
 const ExperienceCanvas = dynamic(
   () => import("./components/experience-canvas").then((module) => module.ExperienceCanvas),
@@ -127,6 +127,7 @@ export function HomePlayApp() {
   const [cameraResetNonce, setCameraResetNonce] = useState(0);
   const [auditMode, setAuditMode] = useState(false);
   const [sceneView, setSceneView] = useState<SceneView>("hero");
+  const [lookMode, setLookMode] = useState<LookMode>(defaultLookMode);
   const [items, setItems] = useState<SceneObjectV1[]>(initialEditorView.items);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(initialEditorView.selectedId);
   const [category, setCategory] = useState<keyof typeof categoryLabels>("all");
@@ -530,11 +531,14 @@ export function HomePlayApp() {
             cameraResetNonce={cameraResetNonce}
             auditMode={auditMode}
             sceneView={sceneView}
+            lookMode={lookMode}
           />
           {mode === "decorate" && !auditMode && (
-            <div className="scene-view-switch" aria-label="場景視角">
+            <div className="scene-view-switch" aria-label="場景視角與風格">
               <button className={sceneView === "hero" ? "active" : ""} onClick={() => setSceneView("hero")}>客餐廳</button>
               <button className={sceneView === "whole" ? "active" : ""} onClick={() => setSceneView("whole")}>全屋</button>
+              <button className={lookMode === "cute" ? "active" : ""} onClick={() => setLookMode("cute")}>可愛</button>
+              <button className={lookMode === "physical" ? "active" : ""} onClick={() => setLookMode("physical")}>實品</button>
             </div>
           )}
           <div className="scene-tip">

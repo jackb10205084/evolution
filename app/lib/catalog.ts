@@ -427,8 +427,10 @@ export const sunnyBonusFurnitureIds = [
   "ikea-lauters",
 ] as const;
 
+// A6 / editor default loadout is owned sales-deck pieces only.
+// IKEA fejka / borgeby / kallax / lauters stay on the 「商品模擬」/IKEA 模擬組 button.
 export const themeFurnitureIds: Record<Exclude<ThemePreset["id"], "empty">, readonly string[]> = {
-  sunny: [...ownedInitialFurnitureIds, ...sunnyBonusFurnitureIds],
+  sunny: [...ownedInitialFurnitureIds],
   urban: ["rug-meadow", "sofa-cloud", "table-pla-tb-02", "chair-breeze", "lamp-moon", "bed-soft"],
   family: ["rug-meadow", "sofa-cloud", "table-pla-tb-02", "chair-breeze", "plant-olive", "bed-soft"],
   pet: ["rug-meadow", "sofa-cloud", "table-pla-tb-02", "chair-breeze", "plant-olive", "bed-soft"],
