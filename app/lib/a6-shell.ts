@@ -114,7 +114,10 @@ const walls = [
   // L-shaped around 多功能室: G15 on the north, B9 on the east.
   // 多功能室 stays west of that partition and still meets the north outer wall
   // (x≈323–436, y=137–325). outer-ac-block sits ON the balcony.
-  // partition-multi-ac poche is continuous — I1A6-01/02 have no door into 右陽台.
+  // partition-multi-ac poche stays continuous (no door on that wall).
+  // 主臥東北 partition-multi-master-right has I1A6-01 2.5+140+2.5 assembly
+  // (west fixed glass + east swing door). This pass punches only the east door
+  // (sourceSpan 487.44–522.60). West glass left as wall until Julian asks.
   wall("outer-multi-top-west-jamb", [323.04, multiTopY0, multiWin70X0, multiTopY1], "outer", "full"),
   wall("outer-multi-top-between-glass-g15", [multiGlassX1, multiTopY0, g15X0, multiTopY1], "outer", "full"),
   wall("outer-multi-top-east", [g15X1, multiTopY0, rightX0, multiTopY1], "outer", "full"),
@@ -136,7 +139,8 @@ const walls = [
   wall("partition-spine-upper", [spineX0, multiDoorY1, spineX1, masterDoorY0], "partition"),
   wall("partition-spine-lower", [spineX0, masterDoorY1, spineX1, 569.4], "partition"),
   wall("partition-multi-master-left", [323.64, 319.92, 436.2, 325.56], "partition"),
-  wall("partition-multi-master-right", [443.52, 317.64, 526.92, 325.08], "partition"),
+  wall("partition-multi-master-right-west", [443.52, 317.64, 487.44, 325.08], "partition"),
+  wall("partition-multi-master-right-east-jamb", [522.60, 317.64, 526.92, 325.08], "partition"),
   wall("partition-master-bath", [385.08, 478.68, 526.92, 484.32], "partition"),
   wall("partition-ensuite-head", [ensuiteX0, 478.68, ensuiteX1, ensuiteDoorY0], "partition"),
   wall("partition-ensuite-jamb", [ensuiteX0, ensuiteDoorY1, ensuiteX1, 564.24], "partition"),
@@ -162,6 +166,9 @@ const openings = [
   opening("b9-window", "window", [530.58, b9Y0, 530.58, b9Y1], Math.PI / 2, 0.9, 1.0),
   opening("multi-entry-door", "door", [320.82, multiDoorY0, 320.82, multiDoorY1], Math.PI / 2, 0, 2.1, 0.1),
   opening("master-entry-door", "door", [320.82, masterDoorY0, 320.82, masterDoorY1], Math.PI / 2, 0, 2.1, 0.1),
+  // 主臥東北 → 右陽台. PDF leaf inner 487.44–522.60 on wall centerline y=321.36.
+  // ~61.8 cm leaf. Hinge east, swing north into balcony. West fixed glass stays wall.
+  opening("master-balcony-door", "door", [487.44, 321.36, 522.60, 321.36], 0, 0, 2.1, 0.13),
   opening("ensuite-door", "door", [387.42, ensuiteDoorY0, 387.42, ensuiteDoorY1], Math.PI / 2, 0, 2.1, 0.1),
   opening("guest-bath-door", "door", [349.14, guestDoorY0, 349.14, guestDoorY1], Math.PI / 2, 0, 2.1, 0.1),
   opening("entry-door", "door", [entryJambL, 651.6, entryJambR, 651.6], 0, 0, 2.1),
@@ -179,7 +186,7 @@ export const A6_SHELL_V3 = {
     pdf: "遠雄BH7樣品屋大樣圖 0718.pdf",
     drawingSet: "A6",
     pages: { dimensions: 2, furnishedPlan: 3, ceilingAndHeights: 7 },
-    caveat: "Walls and openings trace I1A6-01. 左陽台 is the living-north 130 cm band (220 cm slider). 右陽台 is the east vertical strip 444.12–534.24 × 137.04–325.08 (partition-multi-master-right is the south edge), L-shaped around 多功能室 with G15 north and B9 east. 多功能室 stays west of partition-multi-ac and still meets the north outer wall. outer-ac-block sits on 右陽台. I1A6-01/02 have no door in partition-multi-ac. South envelope from the entry jamb to the east corner is solid wall (Julian: 下方不是窗是牆); printed G11 70×100 is not an opening in this shell. 682.5 cm width is labeled. Depth uses the same width scale (~9.115 m). Ceiling collision height 2.85 m is an interactive simplification.",
+    caveat: "Walls and openings trace I1A6-01. 左陽台 is the living-north 130 cm band (220 cm slider). 右陽台 is the east vertical strip 444.12–534.24 × 137.04–325.08 (partition-multi-master-right is the south edge), L-shaped around 多功能室 with G15 north and B9 east. 多功能室 stays west of partition-multi-ac and still meets the north outer wall. outer-ac-block sits on 右陽台. partition-multi-ac stays continuous (no door). 主臥東北 partition-multi-master-right has I1A6-01 2.5+140+2.5 assembly (west fixed glass + east swing door); this pass punches only the east door (sourceSpan 487.44–522.60, ~61.8 cm leaf). West glass left as wall until Julian asks. South envelope from the entry jamb to the east corner is solid wall (Julian: 下方不是窗是牆); printed G11 70×100 is not an opening in this shell. 682.5 cm width is labeled. Depth uses the same width scale (~9.115 m). Ceiling collision height 2.85 m is an interactive simplification.",
   },
   dimensions: { width, depth, wallHeight, outerWall: outer, partitionWall: 0.1 },
   footprint,
