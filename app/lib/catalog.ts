@@ -9,7 +9,7 @@ export const floorplans: Floorplan[] = [
     rooms: "主臥＋多功能室＋2 衛",
     accent: "#f4b86a",
     sourceStatus: "ready",
-    shellVersion: "A6_SHELL_V1",
+    shellVersion: "A6_SHELL_V3",
   },
   {
     id: "bh7-a11",
@@ -87,53 +87,56 @@ export const themes: ThemePreset[] = [
 export const catalog: FurnitureItem[] = [
   {
     id: "sofa-cloud",
-    sku: "PG-SF-001",
-    assetVersion: "1.3.0",
-    name: "雲朵雙人沙發",
+    sku: "HP-A475-AR-MEL-SO-02-C1AA23",
+    assetVersion: "p1-1.1.0",
+    name: "雙人休閒沙發",
     category: "living",
     brand: "Play Ground Living",
     brandKind: "owned",
     price: 42800,
-    color: "#df9d75",
-    accent: "#f5d4bb",
+    color: "#e08a68",
+    accent: "#efb091",
     shape: "sofa",
-    size: { width: 2.15, depth: 0.92, height: 0.82 },
+    assetPath: "/assets/hero-room/sofa-soft.glb",
+    size: { width: 1.56, depth: 0.84, height: 0.72 },
     stock: "in_stock",
   },
   {
     id: "table-pebble",
-    sku: "PG-TB-014",
-    assetVersion: "1.1.0",
-    name: "小石橢圓桌",
+    sku: "HP-A475-AR-PLA-TB-01-93B567",
+    assetVersion: "p1-1.1.0",
+    name: "圓形茶几",
     category: "living",
     brand: "Play Ground Living",
     brandKind: "owned",
     price: 12800,
-    color: "#b9845a",
-    accent: "#e6c89f",
+    color: "#f2ebe1",
+    accent: "#ebe3d6",
     shape: "table",
-    size: { width: 1.1, depth: 0.72, height: 0.38 },
+    assetPath: "/assets/hero-room/table-pebble.glb",
+    size: { width: 0.7, depth: 0.7, height: 0.38 },
     stock: "in_stock",
   },
   {
     id: "chair-breeze",
-    sku: "PG-CH-008",
-    assetVersion: "2.1.0",
-    name: "微風扶手椅",
+    sku: "HP-A475-AR-DON-LO-01-04C7E8",
+    assetVersion: "p1-1.1.0",
+    name: "甜甜圈四星腳休閒椅",
     category: "living",
     brand: "Play Ground Living",
     brandKind: "owned",
     price: 16800,
-    color: "#7ca79a",
-    accent: "#d9c7a1",
+    color: "#c4a06e",
+    accent: "#d8bc93",
     shape: "chair",
-    size: { width: 0.78, depth: 0.78, height: 0.78 },
+    assetPath: "/assets/hero-room/chair-breeze.glb",
+    size: { width: 0.77, depth: 0.67, height: 0.76 },
     stock: "low_stock",
   },
   {
     id: "rug-meadow",
     sku: "PG-RG-021",
-    assetVersion: "1.1.0",
+    assetVersion: "1.2.0",
     name: "草原手織地毯",
     category: "decor",
     brand: "Play Ground Living",
@@ -148,7 +151,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "lamp-moon",
     sku: "LM-221",
-    assetVersion: "1.0.0",
+    assetVersion: "1.1.0",
     name: "小月球立燈",
     category: "decor",
     brand: "Lumi Maison",
@@ -164,7 +167,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "plant-olive",
     sku: "GR-OL-09",
-    assetVersion: "1.3.2",
+    assetVersion: "1.4.0",
     name: "橄欖樹植栽",
     category: "decor",
     brand: "Green Room",
@@ -180,7 +183,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "shelf-cabin",
     sku: "PG-ST-012",
-    assetVersion: "1.0.5",
+    assetVersion: "1.1.0",
     name: "小屋模組收納櫃",
     category: "living",
     brand: "Play Ground Living",
@@ -195,7 +198,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "bed-soft",
     sku: "PG-BD-004",
-    assetVersion: "1.4.0",
+    assetVersion: "1.5.0",
     name: "綿島雙人床",
     category: "bedroom",
     brand: "Play Ground Living",
@@ -210,7 +213,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "ikea-saltsjobaden",
     sku: "IKEA-195.999.18",
-    assetVersion: "ikea-demo-1.0.0",
+    assetVersion: "ikea-demo-1.1.0",
     name: "SALTSJÖBADEN 雙人座沙發",
     category: "living",
     brand: "IKEA",
@@ -229,7 +232,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "ikea-borgeby",
     sku: "IKEA-704.494.02",
-    assetVersion: "ikea-demo-1.0.0",
+    assetVersion: "ikea-demo-1.1.0",
     name: "BORGEBY 圓形咖啡桌",
     category: "living",
     brand: "IKEA",
@@ -248,7 +251,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "ikea-ekenaset",
     sku: "IKEA-705.334.91",
-    assetVersion: "ikea-demo-1.0.0",
+    assetVersion: "ikea-demo-1.1.0",
     name: "EKENÄSET 扶手椅",
     category: "living",
     brand: "IKEA",
@@ -267,7 +270,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "ikea-stoense",
     sku: "IKEA-206.076.82",
-    assetVersion: "ikea-demo-1.0.0",
+    assetVersion: "ikea-demo-1.1.0",
     name: "STOENSE 米色短毛地毯",
     category: "decor",
     brand: "IKEA",
@@ -286,7 +289,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "ikea-lauters",
     sku: "IKEA-604.050.50",
-    assetVersion: "ikea-demo-1.0.0",
+    assetVersion: "ikea-demo-1.1.0",
     name: "LAUTERS 梣木落地燈",
     category: "decor",
     brand: "IKEA",
@@ -305,7 +308,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "ikea-fejka-fig",
     sku: "IKEA-106.152.77",
-    assetVersion: "ikea-demo-1.0.0",
+    assetVersion: "ikea-demo-1.1.0",
     name: "FEJKA 垂葉榕人造盆栽",
     category: "decor",
     brand: "IKEA",
@@ -324,7 +327,7 @@ export const catalog: FurnitureItem[] = [
   {
     id: "ikea-kallax",
     sku: "IKEA-006.289.30",
-    assetVersion: "ikea-demo-1.0.0",
+    assetVersion: "ikea-demo-1.1.0",
     name: "KALLAX 2×3 層架組",
     category: "living",
     brand: "IKEA",
@@ -340,16 +343,64 @@ export const catalog: FurnitureItem[] = [
     size: { width: 0.765, depth: 0.39, height: 1.115 },
     stock: "in_stock",
   },
+  {
+    id: "table-pla-tb-02",
+    sku: "HP-A475-AR-PLA-TB-02-9D2ADC",
+    assetVersion: "p1-1.1.0",
+    name: "圓形茶几",
+    category: "living",
+    brand: "Play Ground Living",
+    brandKind: "owned",
+    price: 1500,
+    color: "#7ea8aa",
+    accent: "#6f9a9c",
+    shape: "table",
+    assetPath: "/assets/hero-room/hp-a475-ar-pla-tb-02.glb",
+    size: { width: 0.38, depth: 0.38, height: 0.46 },
+    stock: "in_stock",
+  },
+  {
+    id: "table-dme52-1000",
+    sku: "HP-A213-DME52-B00DDF",
+    assetVersion: "p1-1.1.0",
+    name: "洽談桌",
+    category: "dining",
+    brand: "Play Ground Living",
+    brandKind: "owned",
+    price: 3400,
+    color: "#c4a07a",
+    accent: "#cfcbc4",
+    shape: "table",
+    assetPath: "/assets/hero-room/hp-a213-dme52-b00ddf.glb",
+    size: { width: 1.0, depth: 1.0, height: 0.75 },
+    stock: "in_stock",
+  },
+  {
+    id: "table-dme52-800",
+    sku: "HP-A213-DME52-0D4DB8",
+    assetVersion: "p1-1.1.0",
+    name: "洽談桌",
+    category: "dining",
+    brand: "Play Ground Living",
+    brandKind: "owned",
+    price: 3400,
+    color: "#c4a07a",
+    accent: "#cfcbc4",
+    shape: "table",
+    assetPath: "/assets/hero-room/hp-a213-dme52-0d4db8.glb",
+    size: { width: 0.8, depth: 0.8, height: 0.75 },
+    stock: "in_stock",
+  },
 ];
 
 export const ownedInitialFurnitureIds = [
   "rug-meadow",
   "sofa-cloud",
-  "table-pebble",
+  "table-pla-tb-02",
   "chair-breeze",
   "lamp-moon",
   "plant-olive",
-  "shelf-cabin",
+  "bed-soft",
 ];
 
 // Kept as the canonical launch preset for runtime validation and older adapters.
@@ -366,7 +417,7 @@ export const ikeaDemoFurnitureIds = [
 ];
 
 // 初始配置中側向（-90°）擺放的家具：計算佔地時寬深互換
-export const sideFacingFurnitureIds = ["shelf-cabin", "ikea-kallax"] as const;
+export const sideFacingFurnitureIds = ["sofa-cloud", "ikea-saltsjobaden", "shelf-cabin", "ikea-kallax"] as const;
 
 // 日光慢生活加碼配置：讓首屏就是佈置完成的家（聯盟商品置於餐廳與多功能室）
 export const sunnyBonusFurnitureIds = [
@@ -374,12 +425,13 @@ export const sunnyBonusFurnitureIds = [
   "ikea-borgeby",
   "ikea-kallax",
   "ikea-lauters",
-  "bed-soft",
 ] as const;
 
+// A6 / editor default loadout is owned sales-deck pieces only.
+// IKEA fejka / borgeby / kallax / lauters stay on the 「商品模擬」/IKEA 模擬組 button.
 export const themeFurnitureIds: Record<Exclude<ThemePreset["id"], "empty">, readonly string[]> = {
-  sunny: [...ownedInitialFurnitureIds, ...sunnyBonusFurnitureIds],
-  urban: ["rug-meadow", "sofa-cloud", "table-pebble", "chair-breeze", "lamp-moon", "shelf-cabin"],
-  family: ["rug-meadow", "sofa-cloud", "table-pebble", "chair-breeze", "plant-olive", "shelf-cabin"],
-  pet: ["rug-meadow", "sofa-cloud", "table-pebble", "chair-breeze", "plant-olive"],
+  sunny: [...ownedInitialFurnitureIds],
+  urban: ["rug-meadow", "sofa-cloud", "table-pla-tb-02", "chair-breeze", "lamp-moon", "bed-soft"],
+  family: ["rug-meadow", "sofa-cloud", "table-pla-tb-02", "chair-breeze", "plant-olive", "bed-soft"],
+  pet: ["rug-meadow", "sofa-cloud", "table-pla-tb-02", "chair-breeze", "plant-olive", "bed-soft"],
 };

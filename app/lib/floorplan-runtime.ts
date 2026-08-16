@@ -1,5 +1,5 @@
 import { A11_SHELL_V1 } from "./a11-shell";
-import { A6_SHELL_V1 } from "./a6-shell";
+import { A6_SHELL_V3 } from "./a6-shell";
 
 export type FloorplanWallSegment = {
   id: string;
@@ -65,26 +65,53 @@ export type FloorplanRuntime = {
 const runtimes: Record<FloorplanRuntime["floorplanId"], FloorplanRuntime> = {
   "bh7-a6": {
     floorplanId: "bh7-a6",
-    shell: A6_SHELL_V1,
+    shell: A6_SHELL_V3,
     audit: {
       overlayPath: "/assets/floorplans/a6-pdf-overlay.png",
       sourcePage: 2,
       furnishedPage: 3,
-      overlayDimensions: [A6_SHELL_V1.dimensions.width, A6_SHELL_V1.dimensions.depth],
+      overlayDimensions: [A6_SHELL_V3.dimensions.width, A6_SHELL_V3.dimensions.depth],
       confirmedWidth: 6.825,
       cameraZoom: 45,
       calibration: "confirmed-width-proportional-depth",
     },
     initialPositions: {
-      // 客廳沿圖面重排：沙發背向走道面窗、茶几在沙發與落地窗之間、層架靠左外牆、避免彼此重疊
-      "rug-meadow": [-1.8, -1.5], "sofa-cloud": [-1.7, -0.72], "table-pebble": [-1.8, -1.95], "chair-breeze": [-0.82, -2.3], "lamp-moon": [-2.72, -1.55], "plant-olive": [-2.83, -2.75], "shelf-cabin": [-2.97, -0.5],
-      "ikea-stoense": [-1.8, -1.5], "ikea-saltsjobaden": [-1.7, -0.72], "ikea-borgeby": [-1.8, -1.95], "ikea-ekenaset": [-0.82, -2.3], "ikea-lauters": [-2.72, -1.55], "ikea-fejka-fig": [-2.7, -2.75], "ikea-kallax": [-2.97, -0.5],
+      // 銷講簡報 p4–p20 完成方案. World xz = A6_SHELL_V3 scale (6.825 m / 388.44 pt).
+      // Catalog mm stay catalog — sofa 1560x840, not the sample-house 100x230 note.
+      // Yaw: sofa stays in sideFacingFurnitureIds (−90°) so it FACES the spine/TV wall.
+      // sofa-cloud: 客廳, balcony-window end (not mid left-wall pile). Back to west light, face spine.
+      "sofa-cloud": [-2.42, -1.88],
+      // table-pla-tb-02 380: coffee in front of sofa toward the spine. Deck 50x75 zone; 700 is too big.
+      "table-pla-tb-02": [-1.52, -1.88],
+      // table-pebble PLA-TB-01 700: NOT the default coffee. Parked only if someone adds the SKU later.
+      "table-pebble": [-1.52, -1.05],
+      // chair-breeze: lounge seat beside sofa (deck bar stools have no SKU).
+      "chair-breeze": [-1.50, -0.95],
+      // rug-meadow: under sofa + 380 coffee group.
+      "rug-meadow": [-1.92, -1.70],
+      // lamp-moon: 客廳 balcony-window corner (p20 afternoon light).
+      "lamp-moon": [-2.96, -2.90],
+      // plant-olive: living window corner, inside the slider.
+      "plant-olive": [-2.20, -2.78],
+      // table-dme52-1000/800: NOT in the A6 完成方案 (deck uses a breakfast bar, no dining table).
+      // Positions kept so a manual add still resolves; default loadout omits them.
+      "table-dme52-1000": [-1.70, 1.90],
+      "table-dme52-800": [-1.70, 1.90],
+      // bed-soft: 主臥, centered on the interior headboard wall toward bath (south, +Z). Door kept clear west.
+      "bed-soft": [1.72, 0.30],
+      // shelf-cabin: omitted from loadout — 1650 h would read as a floor divider, not a TV console.
+      // Stored against 多功能室 east wall as an add-spot only. No invented desk/daybed.
+      "shelf-cabin": [1.40, -2.80],
+      "ikea-stoense": [-1.92, -1.70], "ikea-saltsjobaden": [-2.42, -1.88], "ikea-borgeby": [-1.52, -1.88],
+      "ikea-ekenaset": [-1.50, -0.95], "ikea-lauters": [-2.96, -2.90], "ikea-fejka-fig": [-2.20, -2.78],
+      "ikea-kallax": [1.40, -2.80],
     },
     bonusPositions: {
-      "ikea-fejka-fig": [-0.85, 1.25], "ikea-borgeby": [-1.5, 1.3], "ikea-kallax": [2.45, -4.02], "ikea-lauters": [0.3, -3.55], "bed-soft": [1.55, -0.05],
+      "ikea-fejka-fig": [-0.95, 2.55], "ikea-borgeby": [-1.15, 1.15], "ikea-kallax": [0.72, -2.52],
+      "ikea-lauters": [-0.70, 1.55], "bed-soft": [1.72, 0.30],
     },
-    candidateSpots: [[-2.45, 0.7], [-1.55, 0.7], [-2.45, -1.55], [-1.35, -1.55], [0.8, -0.7], [2.1, -0.7], [0.75, 0.65], [2.1, 0.65]],
-    mascotStart: [-0.9, 2.6],
+    candidateSpots: [[-2.20, 0.45], [-1.35, 0.45], [-2.20, -1.85], [-1.20, -1.85], [0.75, -2.20], [0.75, -3.20], [1.45, 0.55], [2.10, 0.55]],
+    mascotStart: [-0.85, 2.15],
     cameraZoom: 57,
   },
   "bh7-a11": {
@@ -100,11 +127,12 @@ const runtimes: Record<FloorplanRuntime["floorplanId"], FloorplanRuntime> = {
       calibration: "confirmed-width-proportional-depth",
     },
     initialPositions: {
-      "rug-meadow": [-2.78, 1.85], "sofa-cloud": [-3, 2.32], "table-pebble": [-2.72, 1.42], "chair-breeze": [-2.08, 2.18], "lamp-moon": [-3.79, 2.73], "plant-olive": [-3.74, 0.55], "shelf-cabin": [-2.7, 0.9],
+      "rug-meadow": [-2.78, 1.85], "sofa-cloud": [-3, 2.32], "table-pebble": [-2.72, 1.42], "table-pla-tb-02": [-2.15, 1.05], "chair-breeze": [-2.08, 2.18], "lamp-moon": [-3.79, 2.73], "plant-olive": [-3.74, 0.55], "shelf-cabin": [-2.7, 0.9],
+      "table-dme52-1000": [-2.45, 0.70], "table-dme52-800": [-2.45, 0.70], "bed-soft": [0.90, -2.45],
       "ikea-stoense": [-2.78, 1.85], "ikea-saltsjobaden": [-3.18, 2.32], "ikea-borgeby": [-2.72, 1.42], "ikea-ekenaset": [-2.08, 2.18], "ikea-lauters": [-3.79, 2.73], "ikea-fejka-fig": [-3.74, 0.55], "ikea-kallax": [-2, 2.7],
     },
     bonusPositions: {
-      "ikea-fejka-fig": [0.7, 2.2], "ikea-borgeby": [-2.45, 1.2], "ikea-kallax": [2.6, 2.2], "ikea-lauters": [1.4, -2.2], "bed-soft": [1.9, -1.6],
+      "ikea-fejka-fig": [0.7, 2.2], "ikea-borgeby": [-2.45, 1.2], "ikea-kallax": [2.6, 2.2], "ikea-lauters": [1.4, -2.2], "bed-soft": [0.90, -2.45],
     },
     candidateSpots: [[-3.4, 1.35], [-2.45, 1.2], [-3.55, 2.65], [-2.25, 2.7], [0.7, 2.2], [2.6, 2.2], [1.4, -2.2], [2.2, -2.15]],
     mascotStart: [-2.15, 0.78],

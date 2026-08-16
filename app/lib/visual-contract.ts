@@ -1,5 +1,35 @@
 export const HOMEPLAY_VISUAL_VERSION = "v2-original-cozy" as const;
 
+export type LookMode = "cute" | "physical";
+
+export const defaultLookMode: LookMode = "cute";
+
+/** Cute keeps current fillets. Physical straightens 0.05→~0.012 and fridge-class 0.12→~0.02. */
+export function lookFillet(radius: number, look: LookMode = "cute") {
+  if (look === "cute") return radius;
+  if (radius >= 0.1) return 0.02;
+  return Math.max(0.006, Number((radius * 0.24).toFixed(3)));
+}
+
+export const lookModeVisual = {
+  cute: {
+    themeLerpScale: 1,
+    toonFlat: false,
+    roomOutlineStrength: 0.34,
+    objectOutlineStrength: 1.05,
+    objectOutlineThickness: 0.78,
+    selectedOutlineStrength: 1.65,
+  },
+  physical: {
+    themeLerpScale: 0.12,
+    toonFlat: true,
+    roomOutlineStrength: 0.14,
+    objectOutlineStrength: 0.42,
+    objectOutlineThickness: 0.4,
+    selectedOutlineStrength: 0.85,
+  },
+} as const;
+
 export const homePlayVisual = {
   color: {
     milk: "#fffdf8",

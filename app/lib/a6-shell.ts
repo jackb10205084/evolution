@@ -1,9 +1,9 @@
 import type { FloorplanOpening, FloorplanShell, FloorplanWallSegment } from "./floorplan-runtime";
 
-// PDF p.2, left-hand clean construction plan (AutoCAD point coordinates).
-// The X scale is anchored to the confirmed 682.5 cm overall width. Y uses the
-// same scale so the plan keeps the drawing's proportions without inventing a
-// second overall dimension.
+// I1A6-01 (PDF p.2) left-hand construction plan, AutoCAD page coordinates.
+// X is anchored to the labeled 682.5 cm overall width. Y uses the SAME scale.
+// There is no single labeled overall depth; left/right vertical chains each
+// SUM to 915 cm, while this width-scale envelope is 518.76 pt → ~9.115 m.
 const pdfBounds = { x0: 146.4, y0: 137.04, x1: 534.84, y1: 655.8 } as const;
 const width = 6.825;
 const scale = width / (pdfBounds.x1 - pdfBounds.x0);
@@ -12,6 +12,9 @@ const wallHeight = 2.85;
 const outer = 0.15;
 const centerX = (pdfBounds.x0 + pdfBounds.x1) / 2;
 const centerY = (pdfBounds.y0 + pdfBounds.y1) / 2;
+
+/** Convert labeled centimetres to PDF user-space using the confirmed width scale. */
+const cm = (n: number) => n / 100 / scale;
 
 const point = (x: number, y: number) => [(x - centerX) * scale, (y - centerY) * scale] as const;
 
@@ -58,58 +61,127 @@ function opening(
   };
 }
 
-const walls = [
-  // Exterior and structural walls, kept as separate AutoCAD-derived runs so
-  // openings remain actual gaps instead of painted marks on a solid box.
-  wall("outer-multi-top-right", [435.4, 137.6, 526.9, 145.1], "outer", "full"),
-  wall("outer-multi-left", [315.7, 137.6, 323.0, 218.8], "outer", "full"),
-  wall("outer-right-upper", [526.9, 137.6, 534.2, 202.9], "outer", "cutaway"),
-  wall("outer-right-mid", [526.9, 210.8, 534.2, 267.8], "outer", "cutaway"),
-  wall("outer-right-lower", [526.9, 325.1, 534.2, 647.9], "outer", "cutaway"),
-  wall("outer-left-upper", [147.0, 219.4, 154.9, 284.5], "outer", "full"),
-  wall("outer-left-lower", [147.0, 293.0, 154.3, 647.9], "outer", "full"),
-  wall("outer-bottom-left-jamb", [147.0, 647.9, 171.7, 655.3], "outer", "cutaway"),
-  wall("outer-bottom-main", [234.3, 647.9, 526.9, 655.3], "outer", "cutaway"),
+// --- vector anchors from I1A6-01 left poche / thick strokes ---
+const columnEast = 184.68;
+const balconyWallY0 = 210.84;
+const balconyWallY1 = 219.36;
+const sliderStart = columnEast + cm(7.5); // 7.5 cm labeled left jamb
+const sliderEnd = sliderStart + cm(220); // 220 cm labeled inner opening
+const multiLeftX0 = 315.12;
+const multiLeftX1 = 323.64;
+const multiTopY0 = 137.64;
+const multiTopY1 = 145.08;
+const multiWin70X0 = 325.8;
+const multiWin70X1 = 365.52;
+const multiGlassX0 = 365.52;
+const multiGlassX1 = 431.28;
+const g15HatchX0 = 444.12;
+const g15HatchX1 = 493.68;
+const g15Center = (g15HatchX0 + g15HatchX1) / 2;
+const g15X0 = g15Center - cm(35);
+const g15X1 = g15Center + cm(35);
+const rightX0 = 526.92;
+const bottomY0 = 647.88;
+const bottomY1 = 655.8;
+const entryJambL = 171.96;
+const entryJambR = 234.36;
+const spineX0 = 318.0;
+const spineX1 = 323.64;
+const multiDoorY0 = 222.36;
+const multiDoorY1 = 276.0;
+const masterDoorY0 = 469.08;
+const masterDoorY1 = 516.72;
+const ensuiteX0 = 384.6;
+const ensuiteX1 = 390.24;
+const ensuiteDoorY0 = 484.32;
+const ensuiteDoorY1 = 529.68;
+const guestBathX0 = 346.32;
+const guestBathX1 = 351.96;
+const guestDoorY0 = 602.04;
+const guestDoorY1 = 647.4;
 
-  // Main partition spine and room boundaries from I1A6-01.
-  wall("partition-spine-upper", [318.0, 276.0, 323.6, 469.1], "partition"),
-  wall("partition-spine-lower", [318.0, 516.7, 323.6, 569.4], "partition"),
-  wall("partition-multi-master-left", [323.6, 319.9, 436.2, 325.6], "partition"),
-  wall("partition-multi-master-right", [443.5, 317.6, 526.9, 325.1], "partition"),
-  wall("partition-master-bath", [385.1, 479.3, 526.9, 484.3], "partition"),
-  wall("partition-hall-bath", [385.1, 479.3, 389.6, 564.2], "partition"),
-  wall("partition-bath-top-left", [323.6, 564.2, 346.8, 569.4], "partition"),
-  wall("partition-bath-top-center", [351.4, 564.2, 437.5, 569.4], "partition"),
-  wall("partition-bath-top-right", [442.1, 564.2, 475.8, 568.8], "partition"),
-  wall("partition-bath-left", [346.8, 568.8, 351.4, 647.9], "partition"),
-  wall("partition-bath-core", [437.5, 568.8, 442.1, 591.5], "partition"),
-  wall("partition-pipe-left", [496.6, 565.7, 501.6, 651.6], "partition"),
-  wall("partition-pipe-bottom", [442.1, 586.9, 497.0, 591.5], "partition"),
+const walls = [
+  // Exterior / structural poche from I1A6-01. Openings are gaps in these runs.
+  wall("outer-balcony-column", [146.4, 137.04, columnEast, balconyWallY0], "outer", "full"),
+  wall("outer-balcony-sill", [146.4, balconyWallY0, sliderStart, balconyWallY1], "outer", "full"),
+  wall("outer-multi-left", [multiLeftX0, 137.04, multiLeftX1, balconyWallY1], "outer", "full"),
+  // 右陽台 is the east vertical strip east of partition-multi-ac, north parapet
+  // down to partition-multi-master-right (444.12–534.24, 137.04–325.08).
+  // L-shaped around 多功能室: G15 on the north. Julian：右陽台右邊沒有開窗；
+  // printed B9 70×100 is not an opening (same class as G11).
+  // 多功能室 stays west of that partition and still meets the north outer wall
+  // (x≈323–436, y=137–325). outer-ac-block sits ON the balcony.
+  // partition-multi-ac poche stays continuous (no door on that wall).
+  // 主臥東北 partition-multi-master-right has I1A6-01 2.5+140+2.5 assembly
+  // (west fixed glass + east swing door). This pass punches only the east door
+  // (sourceSpan 487.44–522.60). West glass left as wall until Julian asks.
+  wall("outer-multi-top-west-jamb", [323.04, multiTopY0, multiWin70X0, multiTopY1], "outer", "full"),
+  wall("outer-multi-top-between-glass-g15", [multiGlassX1, multiTopY0, g15X0, multiTopY1], "outer", "full"),
+  wall("outer-multi-top-east", [g15X1, multiTopY0, rightX0, multiTopY1], "outer", "full"),
+  wall("outer-right", [526.92, 137.64, 534.24, 655.32], "outer", "cutaway"),
+  wall("outer-ac-block", [493.68, 145.08, 526.32, 210.84], "outer", "full"),
+  wall("outer-left-upper", [146.4, 219.36, 154.92, 284.52], "outer", "full"),
+  wall("outer-left-corner", [146.4, 284.52, 154.92, 293.04], "outer", "full"),
+  wall("outer-left-lower", [146.4, 293.04, 154.92, 647.88], "outer", "full"),
+  wall("outer-bottom-left-jamb", [146.4, bottomY0, entryJambL, bottomY1], "outer", "cutaway"),
+  // Julian: 下方不是窗是牆 — south run is solid from entry jamb to east corner.
+  // Printed G11 70×100 is not an opening in this shell.
+  wall("outer-bottom-from-entry", [entryJambR, bottomY0, 534.24, bottomY1], "outer", "cutaway"),
+  wall("outer-pipe-block", [502.2, 570.84, 526.32, 647.4], "outer", "cutaway"),
+
+  // Room boundaries: 多功能室 / 主臥 / 雙衛浴 / 管道間 / 玄關.
+  wall("partition-multi-ac", [435.6, 145.08, 444.12, 325.08], "partition"),
+  wall("partition-spine-stub", [spineX0, 219.36, spineX1, multiDoorY0], "partition"),
+  wall("partition-spine-upper", [spineX0, multiDoorY1, spineX1, masterDoorY0], "partition"),
+  wall("partition-spine-lower", [spineX0, masterDoorY1, spineX1, 569.4], "partition"),
+  wall("partition-multi-master-left", [323.64, 319.92, 436.2, 325.56], "partition"),
+  wall("partition-multi-master-right-west", [443.52, 317.64, 487.44, 325.08], "partition"),
+  wall("partition-multi-master-right-east-jamb", [522.60, 317.64, 526.92, 325.08], "partition"),
+  wall("partition-master-bath", [385.08, 478.68, 526.92, 484.32], "partition"),
+  wall("partition-ensuite-head", [ensuiteX0, 478.68, ensuiteX1, ensuiteDoorY0], "partition"),
+  wall("partition-ensuite-jamb", [ensuiteX0, ensuiteDoorY1, ensuiteX1, 564.24], "partition"),
+  wall("partition-bath-top-left", [323.64, 563.76, 346.8, 569.4], "partition"),
+  wall("partition-bath-top-center", [351.36, 563.76, 437.52, 569.4], "partition"),
+  wall("partition-bath-top-right", [442.08, 563.76, 475.8, 569.4], "partition"),
+  wall("partition-guest-bath-head", [guestBathX0, 568.8, guestBathX1, guestDoorY0], "partition"),
+  wall("partition-bath-core", [437.52, 568.8, 442.08, 591.48], "partition"),
+  wall("partition-pipe-left", [496.56, 565.68, 501.6, 651.6], "partition"),
+  wall("partition-pipe-bottom", [442.08, 586.92, 497.04, 591.48], "partition"),
+  wall("partition-bath-pipe-jog", [475.8, 549.6, 480.36, 568.8], "partition"),
+  wall("partition-bath-pipe-shelf", [480.36, 549.6, 526.92, 555.24], "partition"),
+  wall("partition-entry-dining", [154.92, 563.76, 262.68, 573.96], "partition"),
+  wall("partition-entry-cabinet", [154.92, 573.96, 166.32, 647.4], "partition"),
 ] satisfies FloorplanWallSegment[];
 
 const openings = [
-  opening("living-balcony-window", "sliding-door", [154.9, 215.1, 315.1, 215.1], 0, 0.05, 2.3),
-  opening("multi-balcony-window", "sliding-door", [323.0, 141.3, 435.4, 141.3], 0, 0.05, 2.3),
-  opening("multi-side-door", "door", [530.5, 267.8, 530.5, 317.6], Math.PI / 2, 0, 2.1),
-  opening("master-entry-door", "door", [320.8, 469.1, 320.8, 516.7], Math.PI / 2, 0, 2.1, 0.1),
-  opening("main-bath-door", "door", [346.8, 566.7, 351.4, 566.7], 0, 0, 2.1, 0.1),
-  opening("secondary-bath-door", "door", [437.5, 566.7, 442.1, 566.7], 0, 0, 2.1, 0.1),
-  opening("entry-door", "door", [171.7, 651.6, 234.3, 651.6], 0, 0, 2.1),
+  opening("living-balcony-door", "sliding-door", [sliderStart, 215.1, sliderEnd, 215.1], 0, 0.05, 2.3),
+  // 多功能室 north is the outer envelope (70 + 115 glass). No invented inner balcony wall.
+  opening("multi-north-window", "window", [multiWin70X0, 141.3, multiWin70X1, 141.3], 0, 0.9, 1.0),
+  opening("multi-north-glass", "window", [multiGlassX0, 141.3, multiGlassX1, 141.3], 0, 0.9, 1.0),
+  opening("g15-window", "window", [g15X0, 141.3, g15X1, 141.3], 0, 0.9, 1.0),
+  opening("multi-entry-door", "door", [320.82, multiDoorY0, 320.82, multiDoorY1], Math.PI / 2, 0, 2.1, 0.1),
+  opening("master-entry-door", "door", [320.82, masterDoorY0, 320.82, masterDoorY1], Math.PI / 2, 0, 2.1, 0.1),
+  // 主臥東北 → 右陽台. PDF leaf inner 487.44–522.60 on wall centerline y=321.36.
+  // ~61.8 cm leaf. Hinge east, swing north into balcony. West fixed glass stays wall.
+  opening("master-balcony-door", "door", [487.44, 321.36, 522.60, 321.36], 0, 0, 2.1, 0.13),
+  opening("ensuite-door", "door", [387.42, ensuiteDoorY0, 387.42, ensuiteDoorY1], Math.PI / 2, 0, 2.1, 0.1),
+  opening("guest-bath-door", "door", [349.14, guestDoorY0, 349.14, guestDoorY1], Math.PI / 2, 0, 2.1, 0.1),
+  opening("entry-door", "door", [entryJambL, 651.6, entryJambR, 651.6], 0, 0, 2.1),
 ] satisfies FloorplanOpening[];
 
 const footprint = [
-  point(315.7, 137.6), point(534.2, 137.6), point(534.2, 655.3),
-  point(147.0, 655.3), point(147.0, 211.3), point(315.7, 211.3),
+  point(146.4, 137.04), point(315.12, 137.04), point(534.24, 137.04),
+  point(534.24, 655.8), point(146.4, 655.8), point(146.4, 137.04),
 ] as const;
 
-export const A6_SHELL_V1 = {
+export const A6_SHELL_V3 = {
   schemaVersion: "1.0" as const,
   status: "drawing-audit-runtime-shell" as const,
   source: {
     pdf: "遠雄BH7樣品屋大樣圖 0718.pdf",
     drawingSet: "A6",
     pages: { dimensions: 2, furnishedPlan: 3, ceilingAndHeights: 7 },
-    caveat: "Walls and openings trace I1A6-01; proportional depth still requires CAD/Blender verification.",
+    caveat: "Walls and openings trace I1A6-01. 左陽台 is the living-north 130 cm band (220 cm slider). 右陽台 is the east vertical strip 444.12–534.24 × 137.04–325.08 (partition-multi-master-right is the south edge), L-shaped around 多功能室 with G15 north. Julian：右陽台右邊沒有開窗；printed B9 70×100 is not an opening (same class as G11). 多功能室 stays west of partition-multi-ac and still meets the north outer wall. outer-ac-block sits on 右陽台. partition-multi-ac stays continuous (no door). 主臥東北 partition-multi-master-right has I1A6-01 2.5+140+2.5 assembly (west fixed glass + east swing door); this pass punches only the east door (sourceSpan 487.44–522.60, ~61.8 cm leaf). West glass left as wall until Julian asks. South envelope from the entry jamb to the east corner is solid wall (Julian: 下方不是窗是牆); printed G11 70×100 is not an opening in this shell. 682.5 cm width is labeled. Depth uses the same width scale (~9.115 m). Ceiling collision height 2.85 m is an interactive simplification.",
   },
   dimensions: { width, depth, wallHeight, outerWall: outer, partitionWall: 0.1 },
   footprint,
@@ -124,4 +196,10 @@ export const A6_SHELL_V1 = {
   collisionWalls: walls.filter((segment) => segment.kind === "outer"),
 } as const satisfies FloorplanShell;
 
-export const A6_EDITABLE_BOUNDS = A6_SHELL_V1.editableBounds;
+/** @deprecated Use A6_SHELL_V3. Alias kept so older adapters keep resolving. */
+export const A6_SHELL_V2 = A6_SHELL_V3;
+
+/** @deprecated Use A6_SHELL_V3. Kept so older adapters keep resolving. */
+export const A6_SHELL_V1 = A6_SHELL_V3;
+
+export const A6_EDITABLE_BOUNDS = A6_SHELL_V3.editableBounds;

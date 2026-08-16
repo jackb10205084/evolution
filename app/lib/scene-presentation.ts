@@ -22,9 +22,9 @@ type PresentationRecipe = {
 
 const presentationRecipes: Record<"bh7-a6" | "bh7-a11", PresentationRecipe> = {
   "bh7-a6": {
-    heroTarget: [-1.68, 0.52, -0.7],
-    heroZoom: 96,
-    residentAnchor: [-0.48, -0.24],
+    heroTarget: [-0.85, 0.52, -2.15],
+    heroZoom: 78,
+    residentAnchor: [-0.58, -0.52],
   },
   "bh7-a11": {
     heroTarget: [-2.72, 0.52, 1.82],
