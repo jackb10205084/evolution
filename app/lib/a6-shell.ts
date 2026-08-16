@@ -126,7 +126,9 @@ const walls = [
   // I1A6-01 right + I1A6-02 show a door leaf at the north of partition-multi-ac.
   // 左陽台 north edge is a 15 cm 女兒牆 (thin double line), not a window.
   wall("outer-balcony-parapet", [columnEast, 137.04, multiLeftX0, parapetY1], "outer", "full", 1.1),
-  wall("outer-multi-top-west-jamb", [323.04, multiTopY0, multiWin70X0, multiTopY1], "outer", "full"),
+  // 多功能室 north is a solid outer wall. The only walk-out to 右陽台 is
+  // multi-balcony-door on partition-multi-ac (east), not a north/left opening.
+  wall("outer-multi-top", [323.04, multiTopY0, multiAcX0, multiTopY1], "outer", "full"),
   wall("outer-multi-top-between-glass-g15", [multiGlassX1, multiTopY0, g15X0, multiTopY1], "outer", "full"),
   wall("outer-multi-top-east", [g15X1, multiTopY0, rightX0, multiTopY1], "outer", "full"),
   wall("outer-right-above-b9", [rightX0, 137.64, rightX1, b9Y0], "outer", "cutaway"),
@@ -167,9 +169,7 @@ const walls = [
 
 const openings = [
   opening("living-balcony-door", "sliding-door", [sliderStart, 215.1, sliderEnd, 215.1], 0, 0.05, 2.3),
-  // 多功能室 north is the outer envelope (70 + 115 glass). No invented inner balcony wall.
-  opening("multi-north-window", "window", [multiWin70X0, 141.3, multiWin70X1, 141.3], 0, 0.9, 1.0),
-  opening("multi-north-glass", "window", [multiGlassX0, 141.3, multiGlassX1, 141.3], 0, 0.9, 1.0),
+  // G15 stays on the 右陽台 north. No north/left walk-out from 多功能室.
   opening("g15-window", "window", [g15X0, 141.3, g15X1, 141.3], 0, 0.9, 1.0),
   opening("b9-window", "window", [530.58, b9Y0, 530.58, b9Y1], Math.PI / 2, 0.9, 1.0),
   // 多功能室 → 右陽台. Leaf 49.92 pt = 87.7 cm from I1A6-01 right / I1A6-02. Not 220.
