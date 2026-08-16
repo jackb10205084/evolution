@@ -261,6 +261,7 @@ function PresentationFloorplan({ floorplanId, palette, mode }: { floorplanId: "b
       {walls.map((wall) => <ShellWall key={wall.id} wall={wall} wallColor={palette.wall} mode={mode} auditMode={false} />)}
       {openings.map((opening) => <ShellOpening key={opening.id} opening={opening} mode={mode} wallColor={palette.wall} skyColor={palette.sky} auditMode={false} />)}
       <FixedKitchen floorplanId={floorplanId} />
+      {floorplanId === "bh7-a6" && <FixedBaths />}
       {mode === "decorate" && <WallDecor floorplanId={floorplanId} accent={palette.accent} />}
     </group>
   );
@@ -646,6 +647,107 @@ function FixedKitchen({ floorplanId }: { floorplanId: "bh7-a6" | "bh7-a11" }) {
             </RoundedBox>
           </group>
         ))}
+      </group>
+      {/* I1A6-02 167.5 dining built-in: west wall +167.5, 89.4 deep, north of the 120 cook/sink run. Not catalog DME52. */}
+      {floorplanId === "bh7-a6" && (
+        <group position={[0.515, 0, -1.037]}>
+          <RigidBody type="fixed" colliders={false}>
+            <CuboidCollider args={[0.838, 0.38, 0.447]} position={[0, 0.38, 0]} />
+          </RigidBody>
+          <RoundedBox position={[0, 0.37, 0]} args={[1.675, 0.7, 0.894]} radius={0.08} smoothness={4}>
+            <meshToonMaterial color="#f3e6d4" gradientMap={toonGradient} toneMapped={false} />
+          </RoundedBox>
+          <RoundedBox position={[0, 0.735, 0]} args={[1.7, 0.06, 0.92]} radius={0.03} smoothness={4}>
+            <meshToonMaterial color="#e8d4bc" gradientMap={toonGradient} toneMapped={false} />
+          </RoundedBox>
+        </group>
+      )}
+    </group>
+  );
+}
+
+function PorcelainToilet({ rotationY = 0 }: { rotationY?: number }) {
+  return (
+    <group rotation={[0, rotationY, 0]}>
+      <RoundedBox position={[0, 0.2, 0.02]} args={[0.38, 0.4, 0.52]} radius={0.12} smoothness={5}>
+        <meshToonMaterial color="#f7f3ec" gradientMap={toonGradient} toneMapped={false} />
+      </RoundedBox>
+      <mesh position={[0, 0.42, -0.02]} rotation={[-Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.16, 0.18, 0.08, 20]} />
+        <meshToonMaterial color="#fffdf8" gradientMap={toonGradient} toneMapped={false} />
+      </mesh>
+      <RoundedBox position={[0, 0.58, 0.16]} args={[0.36, 0.36, 0.14]} radius={0.08} smoothness={4}>
+        <meshToonMaterial color="#f4efe6" gradientMap={toonGradient} toneMapped={false} />
+      </RoundedBox>
+    </group>
+  );
+}
+
+function PorcelainBasin() {
+  return (
+    <group>
+      <RoundedBox position={[0, 0.42, 0]} args={[1.075, 0.78, 0.6]} radius={0.08} smoothness={4}>
+        <meshToonMaterial color="#f6f2ea" gradientMap={toonGradient} toneMapped={false} />
+      </RoundedBox>
+      <RoundedBox position={[0, 0.82, 0.02]} args={[0.42, 0.06, 0.36]} radius={0.03} smoothness={3}>
+        <meshBasicMaterial color="#e7eef1" toneMapped={false} />
+      </RoundedBox>
+      <mesh position={[0, 0.96, -0.16]}>
+        <cylinderGeometry args={[0.018, 0.022, 0.16, 10]} />
+        <meshBasicMaterial color="#c4b6a6" toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
+function FixedBaths() {
+  // World xz from I1A6-02 bays via A6_SHELL_V3 point() (6.825 m / 388.44 pt).
+  // 主衛 interior x 390.24–526.92 (240 cm), y 484.32–549.6 (115 cm).
+  // West→east inside 主衛: 150 wet + 10 partition + 80 toilet. Vanity 107.5×60 sits in the 150 bay.
+  // 客衛 interior x 351.96–437.52 (150 cm), y 569.4–647.88. Sink west, toilet east. 管道間 empty.
+  return (
+    <group>
+      {/* 主衛 vanity 107.5×60 against north of the 150 bay */}
+      <group position={[1.409, 0, 1.844]}>
+        <RigidBody type="fixed" colliders={false}>
+          <CuboidCollider args={[0.538, 0.42, 0.3]} position={[0, 0.42, 0]} />
+        </RigidBody>
+        <PorcelainBasin />
+      </group>
+      {/* 主衛 shower tray 150×115 */}
+      <group position={[1.622, 0, 2.118]}>
+        <RigidBody type="fixed" colliders={false}>
+          <CuboidCollider args={[0.75, 0.06, 0.575]} position={[0, 0.06, 0]} />
+        </RigidBody>
+        <RoundedBox position={[0, 0.03, 0]} args={[1.5, 0.06, 1.15]} radius={0.04} smoothness={3}>
+          <meshToonMaterial color="#eef2f3" gradientMap={toonGradient} toneMapped={false} />
+        </RoundedBox>
+        <RoundedBox position={[0.72, 0.95, 0]} args={[0.04, 1.9, 1.12]} radius={0.02} smoothness={3}>
+          <meshBasicMaterial color="#d7e3e8" transparent opacity={0.35} toneMapped={false} />
+        </RoundedBox>
+      </group>
+      {/* 主衛 toilet in the 80 cm east bay */}
+      <group position={[2.873, 0, 1.994]}>
+        <RigidBody type="fixed" colliders={false}>
+          <CuboidCollider args={[0.2, 0.4, 0.26]} position={[0, 0.4, 0]} />
+        </RigidBody>
+        <PorcelainToilet />
+      </group>
+      {/* 客衛 sink, 60 cm off the west wall */}
+      <group position={[0.499, 0, 3.339]}>
+        <RigidBody type="fixed" colliders={false}>
+          <CuboidCollider args={[0.3, 0.42, 0.28]} position={[0, 0.42, 0]} />
+        </RigidBody>
+        <group scale={[0.56, 1, 0.85]}>
+          <PorcelainBasin />
+        </group>
+      </group>
+      {/* 客衛 toilet, east bay of the 150 cm room */}
+      <group position={[1.403, 0, 3.739]}>
+        <RigidBody type="fixed" colliders={false}>
+          <CuboidCollider args={[0.2, 0.4, 0.26]} position={[0, 0.4, 0]} />
+        </RigidBody>
+        <PorcelainToilet rotationY={Math.PI} />
       </group>
     </group>
   );

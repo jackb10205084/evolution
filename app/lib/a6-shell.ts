@@ -112,14 +112,11 @@ const walls = [
   wall("outer-balcony-column", [146.4, 137.04, columnEast, balconyWallY0], "outer", "full"),
   wall("outer-balcony-sill", [146.4, balconyWallY0, sliderStart, balconyWallY1], "outer", "full"),
   wall("outer-multi-left", [multiLeftX0, 137.04, multiLeftX1, balconyWallY1], "outer", "full"),
-  // Right balcony is the same 130 cm north band as the living balcony.
-  // Parapet stays on the outer north line; walk-out is on the inner balcony wall.
+  // 右陽台 is only the 190 cm band north of 多功能室. No inner wall across the G15/AC pocket.
+  // Walk-out is a hinged door + glass on the multi inner north (not a 220-style slider).
   wall("outer-multi-top-west-jamb", [323.04, multiTopY0, multiWin70X0, multiTopY1], "outer", "full"),
   wall("outer-multi-top-between-glass-g15", [multiGlassX1, multiTopY0, g15X0, multiTopY1], "outer", "full"),
   wall("outer-multi-top-east", [g15X1, multiTopY0, rightX0, multiTopY1], "outer", "full"),
-  wall("outer-multi-balcony-west-jamb", [multiLeftX1, balconyWallY0, multiLeftX1 + cm(7.5), balconyWallY1], "outer", "full"),
-  wall("outer-multi-balcony-east-jamb", [435.6 - cm(7.5), balconyWallY0, 435.6, balconyWallY1], "outer", "full"),
-  wall("outer-east-balcony-sill", [435.6, balconyWallY0, rightX0, balconyWallY1], "outer", "full"),
   wall("outer-right-above-b9", [rightX0, 137.64, rightX1, b9Y0], "outer", "cutaway"),
   wall("outer-right-below-b9", [rightX0, b9Y1, rightX1, 655.32], "outer", "cutaway"),
   wall("outer-ac-block", [493.68, 145.08, 526.32, 210.84], "outer", "full"),
@@ -132,7 +129,7 @@ const walls = [
   wall("outer-pipe-block", [502.2, 570.84, 526.32, 647.4], "outer", "cutaway"),
 
   // Room boundaries: 多功能室 / 主臥 / 雙衛浴 / 管道間 / 玄關.
-  wall("partition-multi-ac", [435.6, balconyWallY1, 444.12, 325.08], "partition"),
+  wall("partition-multi-ac", [435.6, 145.08, 444.12, 325.08], "partition"),
   wall("partition-spine-stub", [spineX0, 219.36, spineX1, multiDoorY0], "partition"),
   wall("partition-spine-upper", [spineX0, multiDoorY1, spineX1, masterDoorY0], "partition"),
   wall("partition-spine-lower", [spineX0, masterDoorY1, spineX1, 569.4], "partition"),
@@ -156,7 +153,9 @@ const walls = [
 
 const openings = [
   opening("living-balcony-door", "sliding-door", [sliderStart, 215.1, sliderEnd, 215.1], 0, 0.05, 2.3),
-  opening("multi-balcony-door", "sliding-door", [multiLeftX1 + cm(7.5), 215.1, 435.6 - cm(7.5), 215.1], 0, 0.05, 2.3),
+  // Inner multi north: hinged leaf on the west (vector split at multiGlassX0) + glass to partition-multi-ac.
+  opening("multi-balcony-door", "door", [multiLeftX1, 215.1, multiGlassX0, 215.1], 0, 0, 2.1),
+  opening("multi-balcony-glass", "window", [multiGlassX0, 215.1, 435.6, 215.1], 0, 0.9, 1.0),
   opening("multi-north-window", "window", [multiWin70X0, 141.3, multiWin70X1, 141.3], 0, 0.9, 1.0),
   opening("multi-north-glass", "window", [multiGlassX0, 141.3, multiGlassX1, 141.3], 0, 0.9, 1.0),
   opening("g15-window", "window", [g15X0, 141.3, g15X1, 141.3], 0, 0.9, 1.0),
@@ -181,7 +180,7 @@ export const A6_SHELL_V3 = {
     pdf: "遠雄BH7樣品屋大樣圖 0718.pdf",
     drawingSet: "A6",
     pages: { dimensions: 2, furnishedPlan: 3, ceilingAndHeights: 7 },
-    caveat: "Walls and openings trace I1A6-01. The north 130 cm band is balcony on both the living (left) and multi (right) sides; both have walk-out sliders on the inner balcony wall. 682.5 cm width is labeled. Depth uses the same width scale (~9.115 m). Ceiling collision height 2.85 m is an interactive simplification.",
+    caveat: "Walls and openings trace I1A6-01. 左陽台 is the left 130 cm north band (220 cm living slider). 右陽台 is only the 190 cm band north of 多功能室 (hinged door + glass, not a full-width slider). East of partition-multi-ac is 空調外箱 (G15 87.5 + AC 72.5), not balcony. 682.5 cm width is labeled. Depth uses the same width scale (~9.115 m). Ceiling collision height 2.85 m is an interactive simplification.",
   },
   dimensions: { width, depth, wallHeight, outerWall: outer, partitionWall: 0.1 },
   footprint,
