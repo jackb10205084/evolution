@@ -16,10 +16,12 @@ export const lookModeVisual = {
   cute: {
     themeLerpScale: 1,
     toonFlat: false,
-    roomOutlineStrength: 0.34,
-    objectOutlineStrength: 1.05,
-    objectOutlineThickness: 0.78,
+    roomOutlineStrength: 0.46,
+    objectOutlineStrength: 1.22,
+    objectOutlineThickness: 0.88,
     selectedOutlineStrength: 1.65,
+    cutawayOpacity: 0.7,
+    watercolorWash: 0.2,
   },
   physical: {
     themeLerpScale: 0.12,
@@ -28,6 +30,8 @@ export const lookModeVisual = {
     objectOutlineStrength: 0.42,
     objectOutlineThickness: 0.4,
     selectedOutlineStrength: 0.85,
+    cutawayOpacity: 0.9,
+    watercolorWash: 0,
   },
 } as const;
 
@@ -49,11 +53,26 @@ export const homePlayVisual = {
     fog: "#f7f3ee",
     outline: "#9eafca",
     objectOutline: "#8f9eb8",
-    outlineOpacity: 0.18,
-    seamOpacity: 0.08,
-    cameraPosition: [7.4, 9.8, 9.4] as const,
-    cameraRotation: [-0.7735580278005101, 0.5129288489597703, 0.44690705595900726] as const,
+    outlineOpacity: 0.24,
+    seamOpacity: 0.06,
+    // ~40° ortho dollhouse; balcony (-Z) up, entry (+Z) down; SE two-wall cutaway.
+    cameraPosition: [7.7, 10.35, 8.85] as const,
+    cameraRotation: [-0.8327255514444918, 0.5296358409814999, 0.49856027621232585] as const,
     cameraTarget: [0, 0.62, 0] as const,
     cameraZoom: 68,
+  },
+  light: {
+    cute: {
+      ambient: { color: "#fffdf8", intensity: 0.5 },
+      hemisphere: { sky: "#fff3e2", ground: "#c5d2e0", intensity: 0.84 },
+      key: { position: [-3.2, 7.4, -6.6] as const, color: "#fff0c4", intensity: 0.34 },
+      fill: { position: [6.2, 3.6, 7.0] as const, color: "#d4e1ef", intensity: 0.1 },
+    },
+    physical: {
+      ambient: { color: "#fffdf8", intensity: 0.58 },
+      hemisphere: { sky: "#fff8ee", ground: "#d4c8c0", intensity: 0.7 },
+      key: { position: [6.5, 10, 7.5] as const, color: "#fff4e0", intensity: 0.42 },
+      fill: { position: [-5, 5, -3] as const, color: "#d7e4f0", intensity: 0.16 },
+    },
   },
 } as const;

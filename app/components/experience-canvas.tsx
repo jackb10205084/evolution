@@ -67,6 +67,7 @@ const mascotAssetPath = "/assets/hero-room/mascot-resident.glb?v=lookdev-3";
 export function ExperienceCanvas(props: Props) {
   const lookMode = props.lookMode ?? defaultLookMode;
   toonGradient = lookMode === "physical" ? physicalToonGradient : cuteToonGradient;
+  const lights = homePlayVisual.light[lookMode];
   const palette = roomPalette[props.themeId] ?? roomPalette.sunny;
   const presentation = useMemo(
     () => getScenePresentation(props.floorplanId, props.sceneView, props.auditMode),
@@ -87,10 +88,10 @@ export function ExperienceCanvas(props: Props) {
       onPointerMissed={() => props.onSelect(null)}
     >
       <color attach="background" args={[homePlayVisual.scene.background]} />
-      <ambientLight intensity={0.6} color="#fffdf8" />
-      <hemisphereLight args={["#fff8ee", "#d4c8c0", 0.7]} />
-      <directionalLight position={[6.5, 10, 7.5]} intensity={0.92} color="#fff4e0" />
-      <directionalLight position={[-5, 5, -3]} intensity={0.28} color="#d7e4f0" />
+      <ambientLight intensity={lights.ambient.intensity} color={lights.ambient.color} />
+      <hemisphereLight args={[lights.hemisphere.sky, lights.hemisphere.ground, lights.hemisphere.intensity]} />
+      <directionalLight position={[...lights.key.position]} intensity={lights.key.intensity} color={lights.key.color} />
+      <directionalLight position={[...lights.fill.position]} intensity={lights.fill.intensity} color={lights.fill.color} />
 
       <Physics gravity={[0, -9.81, 0]} timeStep="vary">
         <FloorplanStage palette={palette} mode={props.mode} floorplanId={props.floorplanId} presentation={presentation} />
@@ -134,7 +135,7 @@ function WatercolorOutlineComposer({ selectedId }: { selectedId: string | null }
     roomOutline.hiddenEdgeColor.set(homePlayVisual.scene.background);
     roomOutline.edgeStrength = lookVisual.roomOutlineStrength;
     roomOutline.edgeGlow = 0;
-    roomOutline.edgeThickness = look === "physical" ? 0.22 : 0.4;
+    roomOutline.edgeThickness = look === "physical" ? 0.22 : 0.48;
     roomOutline.pulsePeriod = 0;
 
     const objectOutline = new OutlinePass(new THREE.Vector2(1, 1), scene, camera);
@@ -408,9 +409,9 @@ function usePlankTexture(floorColor: string) {
     const tints = [
       `#${base.clone().getHexString()}`,
       `#${base.clone().lerp(new THREE.Color("#ffffff"), 0.05).getHexString()}`,
-      `#${base.clone().lerp(new THREE.Color("#a98d6d"), 0.06).getHexString()}`,
+      `#${base.clone().lerp(new THREE.Color("#f8ede0"), 0.08).getHexString()}`,
     ];
-    const seam = `#${base.clone().lerp(new THREE.Color("#8a7460"), 0.26).getHexString()}`;
+    const seam = `#${base.clone().lerp(new THREE.Color("#c4b6a4"), 0.16).getHexString()}`;
     for (let row = 0; row < plankRows; row += 1) {
       const y = row * rowHeight;
       const offset = (row % 2) * (size / 2);
@@ -419,12 +420,12 @@ function usePlankTexture(floorColor: string) {
         context.fillStyle = tints[(row * 3 + column + 6) % 3];
         context.fillRect(x, y, size, rowHeight);
         context.fillStyle = seam;
-        context.globalAlpha = 0.42;
+        context.globalAlpha = 0.18;
         context.fillRect(x, y, 1.6, rowHeight);
         context.globalAlpha = 1;
       }
       context.fillStyle = seam;
-      context.globalAlpha = 0.5;
+      context.globalAlpha = 0.22;
       context.fillRect(0, y, size, 1.4);
       context.globalAlpha = 1;
     }
@@ -439,6 +440,9 @@ function usePlankTexture(floorColor: string) {
 }
 
 function ShellWall({ wall, wallColor, mode, auditMode }: { wall: FloorplanWallSegment; wallColor: string; mode: EditorMode; auditMode: boolean }) {
+  const look = useContext(LookModeContext);
+  const cutaway = !auditMode && wall.view !== "full";
+  const wallOpacity = cutaway ? lookModeVisual[look].cutawayOpacity : 1;
   const color = wall.kind === "window" ? "#e1edf0" : wall.kind === "partition" ? "#fff2e6" : wallColor;
   const displayHeight = auditMode
     ? 0.2
@@ -451,7 +455,7 @@ function ShellWall({ wall, wallColor, mode, auditMode }: { wall: FloorplanWallSe
   return (
     <group position={[wall.center[0], 0, wall.center[1]]} rotation={[0, wall.rotationY ?? 0, 0]}>
       <RoundedBoxLook position={[0, displayHeight / 2, 0]} args={[wall.size[0], displayHeight, wall.size[1]]} radius={0.045} smoothness={4}>
-        <meshBasicMaterial color={color} toneMapped={false} />
+        <meshBasicMaterial color={color} toneMapped={false} transparent={wallOpacity < 1} opacity={wallOpacity} depthWrite={wallOpacity >= 1} />
       </RoundedBoxLook>
       {showBaseboard && (
         <RoundedBoxLook position={[0, 0.055, 0]} args={[wall.size[0] + 0.018, 0.11, wall.size[1] + 0.03]} radius={0.018} smoothness={3}>
@@ -508,7 +512,7 @@ function ShellOpening({ opening, mode, wallColor, skyColor, auditMode }: { openi
       )}
       {/* 玻璃（天空） */}
       <RoundedBoxLook position={[0, sill + visibleHeight / 2, 0]} args={[glassWidth, glassHeight, 0.035]} radius={0.03} smoothness={3}>
-        <meshBasicMaterial color={skyColor} transparent opacity={0.6} />
+        <meshBasicMaterial color={skyColor} transparent opacity={0.88} toneMapped={false} />
       </RoundedBoxLook>
       {/* 窗外遠景綠意（置於玻璃後方，避免共面閃爍） */}
       {!auditMode && (
@@ -1019,12 +1023,12 @@ function FurnitureModel({ product, variant, selected }: { product: FurnitureItem
       return source;
     }
     if (role === "leafLight") return `#${new THREE.Color(base).lerp(new THREE.Color("#f4edcf"), 0.28).getHexString()}`;
-    if (role === "legs") return source;
-    if (role === "wood" && ["sofa", "chair"].includes(product.shape)) return source;
-    if (["primary", "wood", "frame", "shade", "leaf"].includes(role)) return base;
-    if (["cream", "accent", "edge", "pot", "metal", "mattress", "blanket"].includes(role)) return accent;
-    return source;
-  }, selected, lookVisual.toonFlat), [accent, base, look, lookVisual.toonFlat, product.shape, scene, selected]);
+    if (role === "legs") return `#${new THREE.Color(source).lerp(new THREE.Color(homePlayVisual.color.cream), 0.16).getHexString()}`;
+    if (role === "wood" && ["sofa", "chair"].includes(product.shape)) return `#${new THREE.Color(source).lerp(new THREE.Color(homePlayVisual.color.cream), 0.14).getHexString()}`;
+    if (["primary", "wood", "frame", "shade", "leaf"].includes(role)) return `#${new THREE.Color(base).lerp(new THREE.Color(homePlayVisual.color.milk), lookVisual.watercolorWash).getHexString()}`;
+    if (["cream", "accent", "edge", "pot", "metal", "mattress", "blanket"].includes(role)) return `#${new THREE.Color(accent).lerp(new THREE.Color(homePlayVisual.color.cream), lookVisual.watercolorWash * 0.7).getHexString()}`;
+    return `#${new THREE.Color(source).lerp(new THREE.Color(homePlayVisual.color.milk), 0.12).getHexString()}`;
+  }, selected, lookVisual.toonFlat), [accent, base, look, lookVisual.toonFlat, lookVisual.watercolorWash, product.shape, scene, selected]);
 
   return <primitive object={asset} />;
 }
@@ -1158,10 +1162,10 @@ function createToonGradient(kind: LookMode = "cute") {
         246, 240, 232, 255,
       ])
     : Uint8Array.from([
-        176, 168, 180, 255,
-        214, 198, 188, 255,
-        242, 228, 212, 255,
-        255, 250, 244, 255,
+        228, 218, 208, 255,
+        240, 230, 218, 255,
+        250, 244, 234, 255,
+        255, 252, 248, 255,
       ]);
   const gradient = new THREE.DataTexture(
     bytes,
